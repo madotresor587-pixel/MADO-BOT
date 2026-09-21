@@ -1,0 +1,89 @@
+async function handleKamramStyle(command, args, sock, jid, message) {
+  const text = args.join(" ");
+
+  switch (command) {
+
+    case "alive":
+      await sock.sendMessage(jid, {
+        text:
+          "🟢 *MADO-BOT EST EN LIGNE !*\n\n" +
+          "🤖 Bot : MADO-BOT\n" +
+          "⚡ Statut : Actif\n" +
+          "🛠️ Système : Opérationnel"
+      });
+      return true;
+
+    case "runtime":
+      await sock.sendMessage(jid, {
+        text:
+          `⏱️ *RUNTIME*\n\n` +
+          `MADO-BOT fonctionne depuis *${Math.floor(process.uptime())} secondes*.`
+      });
+      return true;
+
+    case "botinfo":
+      await sock.sendMessage(jid, {
+        text:
+          "🤖 *MADO-BOT*\n\n" +
+          "⚡ WhatsApp Bot multifonction\n" +
+          "🧠 Outils IA\n" +
+          "👥 Gestion de groupes\n" +
+          "🎮 Jeux\n" +
+          "🛡️ Protection\n" +
+          "📱 Outils statut\n" +
+          "🛠️ Utilitaires"
+      });
+      return true;
+
+    case "say":
+      if (!text) {
+        await sock.sendMessage(jid, {
+          text: "❌ Exemple : .say Bonjour tout le monde"
+        });
+        return true;
+      }
+
+      await sock.sendMessage(jid, {
+        text
+      });
+      return true;
+
+    case "quote":
+      await sock.sendMessage(jid, {
+        text:
+          "💬 *CITATION*\n\n" +
+          "Chaque petit progrès compte."
+      });
+      return true;
+
+    case "fact":
+      await sock.sendMessage(jid, {
+        text:
+          "🧠 *LE SAVIEZ-VOUS ?*\n\n" +
+          "Les pieuvres possèdent trois cœurs."
+      });
+      return true;
+
+    case "commands":
+      await sock.sendMessage(jid, {
+        text:
+          "📚 *MADO-BOT COMMANDES*\n\n" +
+          "Tape *.menu* pour afficher les commandes disponibles."
+      });
+      return true;
+
+    case "support":
+      await sock.sendMessage(jid, {
+        text:
+          "🆘 *AIDE MADO-BOT*\n\n" +
+          "Utilise *.menu* pour voir les commandes.\n" +
+          "Si une commande provoque une erreur, utilise *.diagnostic*."
+      });
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+module.exports = { handleKamramStyle };
