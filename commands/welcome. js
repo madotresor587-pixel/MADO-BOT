@@ -1,0 +1,69 @@
+const welcomeEnabled = new Map();
+
+async function handleWelcome(command, args, sock, jid) {
+  if (!jid.endsWith("@g.us")) return false;
+
+  if (command === "welcome") {
+    const state = args[0]?.toLowerCase();
+
+    if (state === "on") {
+      welcomeEnabled.set(jid, true);
+
+      await sock.sendMessage(jid, {
+        text: "👋 *WELCOME ACTIVÉ*\n\nMADO-BOT saluera les nouveaux membres."
+      });
+      return true;
+    }
+
+    if (state === "off") {
+      welcomeEnabled.set(jid, false);
+
+      await sock.sendMessage(jid, {
+        text: "🔕 *WELCOME DÉSACTIVÉ*"
+      });
+      return true;
+    }
+
+    await sock.sendMessage(jid, {
+      text: "Utilisation : .welcome on\nou\n.welcome off"
+    });
+
+    return true;
+  }
+
+  return false;
+}
+
+async function welcomeHandler(update, sock) {
+  const { id, participants, action } = update;
+
+  if (!welcomeEnabled.get(id)) return;
+
+  if (action === "add") {
+    for (const user of participants) {
+      await sock.sendMessage(id, {
+        text:
+          `👋 Bienvenue @${user.split("@")[0]} !\n\n` +
+          `🤖 Tu es accueilli par *MADO-BOT*.\n` +
+          `📜 Utilise .menu pour découvrir les commandes.`,
+        mentions: [user]
+      });
+    }
+  }
+
+  if (action === "remove") {
+    for (const user of participants) {
+      await sock.sendMessage(id, {
+        text:
+          `👋 Au revoir @${user.split("@")[0]} !\n\n` +
+          `Merci d'avoir fait partie du groupe.`,
+        mentions: [user]
+      });
+    }
+  }
+}
+
+module.exports = {
+  handleWelcome,
+  welcomeHandler
+};
