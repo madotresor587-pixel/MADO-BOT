@@ -1,0 +1,99 @@
+async function handleGroupInfo(command, args, sock, jid, message) {
+  const commands = [
+    "groupowner",
+    "grouptime",
+    "groupcreated",
+    "groupid",
+    "myrole"
+  ];
+
+  if (!commands.includes(command)) return false;
+
+  if (!jid.endsWith("@g.us")) {
+    await sock.sendMessage(jid, {
+      text: "❌ Cette commande fonctionne uniquement dans un groupe."
+    });
+    return true;
+  }
+
+  const metadata = await sock.groupMetadata(jid);
+
+  const sender =
+    message.key.participant ||
+    message.key.remoteJid;
+
+  if (command === "groupowner") {
+    const owner = metadata.owner;
+
+    await sock.sendMessage(jid, {
+      text: owner
+        ? `👑 Créateur du groupe : @${owner.split("@")[0]}`
+        : "ℹ️ Le créateur du groupe n'est pas disponible.",
+      mentions: owner ? [owner] : []
+    });
+
+    return true;
+  }
+
+  if (command === "grouptime") {
+    const created = metadata.creation
+      ? new Date(metadata.creation * 1000)
+      : null;
+
+    await sock.sendMessage(jid, {
+      text: created
+        ? `📅 Groupe créé le : ${created.toLocaleString()}`
+        : "ℹ️ Date de création indisponible."
+    });
+
+    return true;
+  }
+
+  if (command === "groupcreated") {
+    const created = metadata.creation
+      ? new Date(metadata.creation * 1000)
+      : null;
+
+    await sock.sendMessage(jid, {
+      text: created
+        ? `🗓️ Création du groupe : ${created.toLocaleDateString()}`
+        : "❌ Information indisponible."
+    });
+
+    return true;
+  }
+
+  if (command === "groupid") {
+    await sock.sendMessage(jid, {
+      text: `🆔 ID du groupe :\n${jid}`
+    });
+
+    return true;
+  }
+
+  if (command === "myrole") {
+    const member = metadata.participants.find(
+      p => p.id === sender
+    );
+
+    let role = "👤 Membre";
+
+    if (member?.admin === "admin") {
+      role = "🛡️ Administrateur";
+    }
+
+    if (member?.admin === "superadmin") {
+      role = "👑 Super-administrateur";
+    }
+
+    await sock.sendMessage(jid, {
+      text: `🎭 Ton rôle dans ce groupe : *${role}*`
+    });
+
+    return true;
+  }
+
+  return false;
+}
+
+module.exports = { handleGroupInfo };
