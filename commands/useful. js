@@ -1,0 +1,144 @@
+const axios = require("axios");
+
+async function handleUseful(command, args, sock, jid) {
+  const text = args.join(" ");
+
+  switch (command) {
+
+    case "translate":
+      if (!text) {
+        await sock.sendMessage(jid, {
+          text: "❌ Exemple : .translate fr hello world"
+        });
+        return true;
+      }
+
+      await sock.sendMessage(jid, {
+        text:
+          "🌍 *TRADUCTION*\n\n" +
+          "Cette commande utilise le module IA de MADO-BOT.\n" +
+          `Texte reçu : ${text}`
+      });
+      return true;
+
+    case "weather":
+      if (!text) {
+        await sock.sendMessage(jid, {
+          text: "❌ Exemple : .weather Abidjan"
+        });
+        return true;
+      }
+
+      try {
+        const response = await axios.get(
+          `https://wttr.in/${encodeURIComponent(text)}?format=3`,
+          { timeout: 8000 }
+        );
+
+        await sock.sendMessage(jid, {
+          text: `🌤️ ${response.data}`
+        });
+      } catch {
+        await sock.sendMessage(jid, {
+          text: "❌ Impossible de récupérer la météo."
+        });
+      }
+
+      return true;
+
+    case "convert":
+      if (args.length < 3) {
+        await sock.sendMessage(jid, {
+          text:
+            "❌ Exemple : .convert 10 km m\n\n" +
+            "Unités simples : km, m, cm, g, kg, l, ml"
+        });
+        return true;
+      }
+
+      const value = Number(args[0]);
+      const from = args[1].toLowerCase();
+      const to = args[2].toLowerCase();
+
+      if (!Number.isFinite(value)) {
+        await sock.sendMessage(jid, {
+          text: "❌ Valeur numérique invalide."
+        });
+        return true;
+      }
+
+      const units = {
+        km: 1000,
+        m: 1,
+        cm: 0.01,
+        kg: 1000,
+        g: 1,
+        l: 1,
+        ml: 0.001
+      };
+
+      if (!(from in units) || !(to in units)) {
+        await sock.sendMessage(jid, {
+          text: "❌ Unité non prise en charge."
+        });
+        return true;
+      }
+
+      const result =
+        value * units[from] / units[to];
+
+      await sock.sendMessage(jid, {
+        text: `🔄 *CONVERSION*\n\n${value} ${from} = *${result} ${to}*`
+      });
+
+      return true;
+
+    case "qr":
+      if (!text) {
+        await sock.sendMessage(jid, {
+          text: "❌ Exemple : .qr Bonjour MADO"
+        });
+        return true;
+      }
+
+      await sock.sendMessage(jid, {
+        text:
+          "🔳 *QR CODE*\n\n" +
+          `Texte à encoder : ${text}\n\n` +
+          "ℹ️ Le générateur d'image QR sera connecté dans le module média final."
+      });
+      return true;
+
+    case "calcpercent": {
+      if (args.length < 2) {
+        await sock.sendMessage(jid, {
+          text: "❌ Exemple : .calcpercent 20 500"
+        });
+        return true;
+      }
+
+      const percent = Number(args[0]);
+      const number = Number(args[1]);
+
+      if (!Number.isFinite(percent) || !Number.isFinite(number)) {
+        await sock.sendMessage(jid, {
+          text: "❌ Utilise deux nombres."
+        });
+        return true;
+      }
+
+      const result = number * percent / 100;
+
+      await sock.sendMessage(jid, {
+        text: `🧮 *${percent}% de ${number} = ${result}*`
+      });
+
+      return true;
+    }
+
+    default:
+      return false;
+  }
+}
+
+module.exports = { handleUseful };
