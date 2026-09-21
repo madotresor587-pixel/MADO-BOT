@@ -1,0 +1,106 @@
+const os = require("os");
+
+async function handleInfoTools(command, args, sock, jid) {
+  switch (command) {
+
+    case "os":
+      await sock.sendMessage(jid, {
+        text:
+          `🖥️ *SYSTÈME*\n\n` +
+          `OS : ${os.platform()}\n` +
+          `Architecture : ${os.arch()}\n` +
+          `Node.js : ${process.version}`
+      });
+      return true;
+
+    case "cpu":
+      await sock.sendMessage(jid, {
+        text:
+          `⚙️ *CPU*\n\n` +
+          `Processeurs : ${os.cpus().length}\n` +
+          `Modèle : ${os.cpus()[0]?.model || "Inconnu"}`
+      });
+      return true;
+
+    case "ram":
+      await sock.sendMessage(jid, {
+        text:
+          `🧠 *RAM SERVEUR*\n\n` +
+          `Totale : ${Math.round(os.totalmem() / 1024 / 1024)} MB\n` +
+          `Libre : ${Math.round(os.freemem() / 1024 / 1024)} MB`
+      });
+      return true;
+
+    case "platform":
+      await sock.sendMessage(jid, {
+        text: `📱 Plateforme : *${os.platform()}*`
+      });
+      return true;
+
+    case "node":
+      await sock.sendMessage(jid, {
+        text: `🟢 Version Node.js : *${process.version}*`
+      });
+      return true;
+
+    case "timezone":
+      await sock.sendMessage(jid, {
+        text:
+          `🌍 Fuseau horaire du serveur :\n` +
+          `${Intl.DateTimeFormat().resolvedOptions().timeZone}`
+      });
+      return true;
+
+    case "dateinfo":
+      await sock.sendMessage(jid, {
+        text:
+          `📅 *DATE*\n\n` +
+          new Date().toLocaleString()
+      });
+      return true;
+
+    case "randomcolor": {
+      const letters = "0123456789ABCDEF";
+      let hex = "#";
+
+      for (let i = 0; i < 6; i++) {
+        hex += letters[Math.floor(Math.random() * 16)];
+      }
+
+      await sock.sendMessage(jid, {
+        text: `🎨 Couleur aléatoire : *${hex}*`
+      });
+
+      return true;
+    }
+
+    case "password":
+      await sock.sendMessage(jid, {
+        text:
+          "🔐 *GÉNÉRATEUR DE MOT DE PASSE*\n\n" +
+          "Pour des raisons de sécurité, utilise un gestionnaire de mots de passe fiable pour créer et stocker tes mots de passe."
+      });
+      return true;
+
+    case "helpinfo":
+      await sock.sendMessage(jid, {
+        text:
+          "ℹ️ *COMMANDES INFORMATIONS*\n\n" +
+          ".os\n" +
+          ".cpu\n" +
+          ".ram\n" +
+          ".platform\n" +
+          ".node\n" +
+          ".timezone\n" +
+          ".dateinfo\n" +
+          ".randomcolor\n" +
+          ".password"
+      });
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+module.exports = { handleInfoTools };
