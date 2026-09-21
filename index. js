@@ -18,6 +18,7 @@ async function startBot() {
     await useMultiFileAuthState("./session");
 
   const sock = makeWASocket({
+
     auth: state,
     logger: pino({ level: "silent" }),
     printQRInTerminal: true
@@ -83,3 +84,4 @@ async function startBot() {
 }
 
 startBot();
+const { handleExtra } = require("./commands/extra");
