@@ -1,0 +1,39 @@
+async function handleStatus(command, args, sock, jid) {
+  switch (command) {
+
+    case "status":
+      await sock.sendMessage(jid, {
+        text:
+          "📱 *MADO-BOT — STATUTS*\n\n" +
+          "• .statushelp — commandes de statut\n" +
+          "• .statusinfo — informations du statut\n" +
+          "• .statusmenu — menu statut"
+      });
+      return true;
+
+    case "statushelp":
+    case "statusmenu":
+      await sock.sendMessage(jid, {
+        text:
+          "📱 *COMMANDES STATUT*\n\n" +
+          "🔹 .status — menu statut\n" +
+          "🔹 .statusinfo — informations\n" +
+          "🔹 .statusmenu — afficher le menu\n\n" +
+          "💡 Les fonctions de publication automatique seront ajoutées au module final."
+      });
+      return true;
+
+    case "statusinfo":
+      await sock.sendMessage(jid, {
+        text:
+          "ℹ️ *STATUT MADO-BOT*\n\n" +
+          "MADO-BOT peut être étendu avec des fonctions de gestion des statuts WhatsApp."
+      });
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+module.exports = { handleStatus };
