@@ -1,0 +1,253 @@
+const settings = new Map();
+const flood = new Map();
+const repeated = new Map();
+
+const defaults = {
+  antilink: false,
+  antispam: true,
+  antiflood: true,
+  anticaps: false,
+  antiword: false,
+  antimention: false,
+  antirepeat: true,
+  antibot: false
+};
+
+function getSettings(jid) {
+  if (!settings.has(jid)) {
+    settings.set(jid, { ...defaults });
+  }
+  return settings.get(jid);
+}
+
+function hasLink(text) {
+  return /(https?:\/\/|www\.|chat\.whatsapp\.com\/|t\.me\/|discord\.gg\/)/i.test(text);
+}
+
+function isCaps(text) {
+  const letters = text.replace(/[^a-zA-ZÀ-ÿ]/g, "");
+  if (letters.length < 10) return false;
+
+  const upper = letters.replace(/[^A-ZÀ-Ý]/g, "").length;
+  return upper / letters.length >= 0.8;
+}
+
+async function isAdmin(sock, jid, user) {
+  const metadata = await sock.groupMetadata(jid);
+
+  const member = metadata.participants.find(
+    p => p.id === user
+  );
+
+  return !!(
+    member &&
+    (member.admin === "admin" || member.admin === "superadmin")
+  );
+}
+
+async function removeUser(sock, jid, user) {
+  try {
+    await sock.groupParticipantsUpdate(
+      jid,
+      [user],
+      "remove"
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function handleAnti(command, args, sock, jid, message) {
+  if (!jid.endsWith("@g.us")) return false;
+
+  const antiCommands = [
+    "antilink",
+    "antispam",
+    "antiflood",
+    "anticaps",
+    "antiword",
+    "antimention",
+    "antirepeat",
+    "antibot",
+    "antis"
+  ];
+
+  if (!antiCommands.includes(command)) return false;
+
+  const sender =
+    message.key.participant ||
+    message.key.remoteJid;
+
+  if (!(await isAdmin(sock, jid, sender))) {
+    await sock.sendMessage(jid, {
+      text: "⛔ Commande réservée aux administrateurs."
+    });
+    return true;
+  }
+
+  const config = getSettings(jid);
+
+  if (command === "antis") {
+    const status = Object.entries(config)
+      .map(([name, value]) =>
+        `${value ? "🟢" : "🔴"} ${name}`
+      )
+      .join("\n");
+
+    await sock.sendMessage(jid, {
+      text: `🛡️ *MADO-BOT ANTI*\n\n${status}`
+    });
+
+    return true;
+  }
+
+  const key = command;
+
+  if (!["on", "off"].includes(args[0])) {
+    await sock.sendMessage(jid, {
+      text: `Utilisation : .${command} on\nou\n.${command} off`
+    });
+    return true;
+  }
+
+  config[key] = args[0] === "on";
+
+  await sock.sendMessage(jid, {
+    text:
+      `${config[key] ? "🟢" : "🔴"} ${command.toUpperCase()} ` +
+      `${config[key] ? "activé" : "désactivé"}.`
+  });
+
+  return true;
+}
+
+async function processAnti(message, sock) {
+  const jid = message.key.remoteJid;
+
+  if (!jid?.endsWith("@g.us")) return;
+
+  const text =
+    message.message?.conversation ||
+    message.message?.extendedTextMessage?.text ||
+    "";
+
+  if (!text) return;
+
+  const sender =
+    message.key.participant ||
+    message.key.remoteJid;
+
+  if (await isAdmin(sock, jid, sender)) return;
+
+  const config = getSettings(jid);
+
+  // ANTI-LINK
+  if (config.antilink && hasLink(text)) {
+    await sock.sendMessage(jid, {
+      text: `🚫 @${sender.split("@")[0]}, les liens ne sont pas autorisés.`,
+      mentions: [sender]
+    });
+
+    await removeUser(sock, jid, sender);
+    return;
+  }
+
+  // ANTI-CAPS
+  if (config.anticaps && isCaps(text)) {
+    await sock.sendMessage(jid, {
+      text: `⚠️ @${sender.split("@")[0]}, évite les messages entièrement en majuscules.`,
+      mentions: [sender]
+    });
+    return;
+  }
+
+  // ANTI-MENTION MASSIVE
+  if (config.antimention) {
+    const mentions =
+      message.message?.extendedTextMessage?.contextInfo
+        ?.mentionedJid || [];
+
+    if (mentions.length >= 5) {
+      await sock.sendMessage(jid, {
+        text: "🚫 Les mentions massives sont interdites."
+      });
+
+      await removeUser(sock, jid, sender);
+      return;
+    }
+  }
+
+  // ANTI-FLOOD
+  if (config.antiflood) {
+    const now = Date.now();
+
+    if (!flood.has(sender)) {
+      flood.set(sender, []);
+    }
+
+    const timestamps = flood.get(sender)
+      .filter(t => now - t < 10000);
+
+    timestamps.push(now);
+    flood.set(sender, timestamps);
+
+    if (timestamps.length >= 6) {
+      await sock.sendMessage(jid, {
+        text: `🚨 @${sender.split("@")[0]}, ralentis les messages.`,
+        mentions: [sender]
+      });
+
+      await removeUser(sock, jid, sender);
+      flood.delete(sender);
+      return;
+    }
+  }
+
+  // ANTI-SPAM
+  if (config.antispam && text.length > 5000) {
+    await sock.sendMessage(jid, {
+      text: "🚫 Message trop long détecté."
+    });
+
+    return;
+  }
+
+  // ANTI-REPEAT
+  if (config.antirepeat) {
+    const key = sender;
+
+    if (!repeated.has(key)) {
+      repeated.set(key, {
+        text,
+        count: 1
+      });
+    } else {
+      const data = repeated.get(key);
+
+      if (data.text === text) {
+        data.count++;
+
+        if (data.count >= 4) {
+          await sock.sendMessage(jid, {
+            text: "🚫 Messages répétés détectés."
+          });
+
+          await removeUser(sock, jid, sender);
+          repeated.delete(key);
+          return;
+        }
+      } else {
+        repeated.set(key, {
+          text,
+          count: 1
+        });
+      }
+    }
+  }
+}
+
+module.exports = {
+  handleAnti,
+  processAnti
+};
