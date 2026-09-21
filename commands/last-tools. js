@@ -1,0 +1,355 @@
+async function handleLastTools(command, args, sock, jid) {
+  const text = args.join(" ");
+
+  switch (command) {
+
+    case "ping2":
+      await sock.sendMessage(jid, {
+        text: `🏓 Pong ! ${Date.now()}`
+      });
+      return true;
+
+    case "hello":
+      await sock.sendMessage(jid, {
+        text: "👋 Bonjour ! MADO-BOT est là."
+      });
+      return true;
+
+    case "goodmorning":
+      await sock.sendMessage(jid, {
+        text: "🌅 Bonjour ! Bonne journée avec MADO-BOT."
+      });
+      return true;
+
+    case "goodnight":
+      await sock.sendMessage(jid, {
+        text: "🌙 Bonne nuit ! À bientôt."
+      });
+      return true;
+
+    case "motivation":
+      await sock.sendMessage(jid, {
+        text: "🔥 Continue d'avancer, même les petits progrès comptent."
+      });
+      return true;
+
+    case "quote2":
+      await sock.sendMessage(jid, {
+        text: "💭 La connaissance grandit lorsqu'on la partage."
+      });
+      return true;
+
+    case "fact2":
+      await sock.sendMessage(jid, {
+        text: "🧠 Le cœur humain bat des milliers de fois chaque jour."
+      });
+      return true;
+
+    case "joke":
+      await sock.sendMessage(jid, {
+        text: "😂 Pourquoi l'ordinateur avait froid ? Parce qu'il avait laissé ses fenêtres ouvertes."
+      });
+      return true;
+
+    case "random":
+      await sock.sendMessage(jid, {
+        text: `🎲 ${Math.floor(Math.random() * 1000000)}`
+      });
+      return true;
+
+    case "yesno":
+      await sock.sendMessage(jid, {
+        text: Math.random() < 0.5 ? "✅ OUI" : "❌ NON"
+      });
+      return true;
+
+    case "even":
+      {
+        const n = Number(args[0]);
+
+        if (!Number.isFinite(n)) {
+          await sock.sendMessage(jid, {
+            text: "❌ Exemple : .even 24"
+          });
+          return true;
+        }
+
+        await sock.sendMessage(jid, {
+          text: Number.isInteger(n)
+            ? `${n} est ${n % 2 === 0 ? "pair" : "impair"}.`
+            : "❌ Entre un nombre entier."
+        });
+
+        return true;
+      }
+
+    case "prime":
+      {
+        const n = Number(args[0]);
+
+        if (!Number.isInteger(n) || n < 2) {
+          await sock.sendMessage(jid, {
+            text: "❌ Exemple : .prime 17"
+          });
+          return true;
+        }
+
+        let isPrime = true;
+
+        for (let i = 2; i <= Math.sqrt(n); i++) {
+          if (n % i === 0) {
+            isPrime = false;
+            break;
+          }
+        }
+
+        await sock.sendMessage(jid, {
+          text: `🔢 ${n} est ${isPrime ? "un nombre premier" : "un nombre non premier"}.`
+        });
+
+        return true;
+      }
+
+    case "square":
+      {
+        const n = Number(args[0]);
+
+        if (!Number.isFinite(n)) {
+          await sock.sendMessage(jid, {
+            text: "❌ Exemple : .square 12"
+          });
+          return true;
+        }
+
+        await sock.sendMessage(jid, {
+          text: `² ${n}² = *${n * n}*`
+        });
+
+        return true;
+      }
+
+    case "sqrt":
+      {
+        const n = Number(args[0]);
+
+        if (!Number.isFinite(n) || n < 0) {
+          await sock.sendMessage(jid, {
+            text: "❌ Entre un nombre positif."
+          });
+          return true;
+        }
+
+        await sock.sendMessage(jid, {
+          text: `√${n} = *${Math.sqrt(n)}*`
+        });
+
+        return true;
+      }
+
+    case "abs":
+      {
+        const n = Number(args[0]);
+
+        if (!Number.isFinite(n)) {
+          await sock.sendMessage(jid, {
+            text: "❌ Exemple : .abs -25"
+          });
+          return true;
+        }
+
+        await sock.sendMessage(jid, {
+          text: `|${n}| = *${Math.abs(n)}*`
+        });
+
+        return true;
+      }
+
+    case "min":
+      {
+        const numbers = args.map(Number);
+
+        if (!numbers.length || numbers.some(n => !Number.isFinite(n))) {
+          await sock.sendMessage(jid, {
+            text: "❌ Exemple : .min 4 8 2 10"
+          });
+          return true;
+        }
+
+        await sock.sendMessage(jid, {
+          text: `📉 Minimum : *${Math.min(...numbers)}*`
+        });
+
+        return true;
+      }
+
+    case "max":
+      {
+        const numbers = args.map(Number);
+
+        if (!numbers.length || numbers.some(n => !Number.isFinite(n))) {
+          await sock.sendMessage(jid, {
+            text: "❌ Exemple : .max 4 8 2 10"
+          });
+          return true;
+        }
+
+        await sock.sendMessage(jid, {
+          text: `📈 Maximum : *${Math.max(...numbers)}*`
+        });
+
+        return true;
+      }
+
+    case "sum":
+      {
+        const numbers = args.map(Number);
+
+        if (!numbers.length || numbers.some(n => !Number.isFinite(n))) {
+          await sock.sendMessage(jid, {
+            text: "❌ Exemple : .sum 10 20 30"
+          });
+          return true;
+        }
+
+        const total = numbers.reduce((a, b) => a + b, 0);
+
+        await sock.sendMessage(jid, {
+          text: `➕ Somme : *${total}*`
+        });
+
+        return true;
+      }
+
+    case "average":
+      {
+        const numbers = args.map(Number);
+
+        if (!numbers.length || numbers.some(n => !Number.isFinite(n))) {
+          await sock.sendMessage(jid, {
+            text: "❌ Exemple : .average 10 15 20"
+          });
+          return true;
+        }
+
+        const average =
+          numbers.reduce((a, b) => a + b, 0) / numbers.length;
+
+        await sock.sendMessage(jid, {
+          text: `📊 Moyenne : *${average}*`
+        });
+
+        return true;
+      }
+
+    case "trim":
+      await sock.sendMessage(jid, {
+        text: text
+          ? text.trim()
+          : "❌ Écris un texte."
+      });
+      return true;
+
+    case "words":
+      await sock.sendMessage(jid, {
+        text: text
+          ? `📝 ${text.trim().split(/\s+/).length} mot(s)`
+          : "❌ Écris un texte."
+      });
+      return true;
+
+    case "spaces":
+      await sock.sendMessage(jid, {
+        text: text
+          ? `⬜ Espaces : *${(text.match(/ /g) || []).length}*`
+          : "❌ Écris un texte."
+      });
+      return true;
+
+    case "cleantext":
+      await sock.sendMessage(jid, {
+        text: text
+          ? text.replace(/\s+/g, " ").trim()
+          : "❌ Écris un texte."
+      });
+      return true;
+
+    case "capitalize":
+      await sock.sendMessage(jid, {
+        text: text
+          ? text.charAt(0).toUpperCase() + text.slice(1)
+          : "❌ Écris un texte."
+      });
+      return true;
+
+    case "repeat3":
+      if (!text) {
+        await sock.sendMessage(jid, {
+          text: "❌ Exemple : .repeat3 Bonjour"
+        });
+        return true;
+      }
+
+      await sock.sendMessage(jid, {
+        text: `${text}\n${text}\n${text}`
+      });
+      return true;
+
+    case "symbols":
+      await sock.sendMessage(jid, {
+        text: "★ ☆ ✦ ✧ • ◇ ◆ ♡ ♥ ✓ ✔ ✕ ➜ ➤"
+      });
+      return true;
+
+    case "emojis":
+      await sock.sendMessage(jid, {
+        text: "😀 😎 😂 🔥 ❤️ 💯 🚀 ⭐ 🎯 🤖 🎮 👑"
+      });
+      return true;
+
+    case "randomemoji2": {
+      const emojis = [
+        "😀", "😂", "😎", "🔥", "❤️",
+        "💯", "🚀", "⭐", "🎯", "🤖"
+      ];
+
+      const emoji =
+        emojis[Math.floor(Math.random() * emojis.length)];
+
+      await sock.sendMessage(jid, {
+        text: `🎲 Emoji : ${emoji}`
+      });
+
+      return true;
+    }
+
+    case "toolslast":
+      await sock.sendMessage(jid, {
+        text:
+          "🛠️ *DERNIÈRES COMMANDES*\n\n" +
+          ".hello\n" +
+          ".goodmorning\n" +
+          ".goodnight\n" +
+          ".motivation\n" +
+          ".joke\n" +
+          ".even\n" +
+          ".prime\n" +
+          ".square\n" +
+          ".sqrt\n" +
+          ".abs\n" +
+          ".min\n" +
+          ".max\n" +
+          ".sum\n" +
+          ".average\n" +
+          ".cleantext\n" +
+          ".capitalize\n" +
+          ".symbols\n" +
+          ".emojis"
+      });
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+module.exports = { handleLastTools };
