@@ -1,0 +1,95 @@
+const os = require("os");
+
+async function handleExtra(command, args, sock, jid) {
+  const text = args.join(" ");
+
+  switch (command) {
+    case "about":
+      await sock.sendMessage(jid, {
+        text: "🤖 MADO-BOT\nBot WhatsApp multifonction avec outils IA."
+      });
+      return true;
+
+    case "creator":
+      await sock.sendMessage(jid, {
+        text: "👑 Créateur : MADO"
+      });
+      return true;
+
+    case "server":
+      await sock.sendMessage(jid, {
+        text:
+          `🖥️ INFORMATIONS\n\n` +
+          `OS : ${os.platform()}\n` +
+          `Architecture : ${os.arch()}\n` +
+          `RAM : ${Math.round(os.totalmem() / 1024 / 1024)} MB\n` +
+          `Uptime : ${Math.floor(os.uptime() / 60)} min`
+      });
+      return true;
+
+    case "echo":
+      await sock.sendMessage(jid, {
+        text: text || "❌ Écris un texte."
+      });
+      return true;
+
+    case "reverse":
+      await sock.sendMessage(jid, {
+        text: text
+          ? text.split("").reverse().join("")
+          : "❌ Exemple : .reverse bonjour"
+      });
+      return true;
+
+    case "length":
+      await sock.sendMessage(jid, {
+        text: text
+          ? `🔢 Nombre de caractères : ${text.length}`
+          : "❌ Écris un texte."
+      });
+      return true;
+
+    case "uppercase":
+      await sock.sendMessage(jid, {
+        text: text ? text.toUpperCase() : "❌ Écris un texte."
+      });
+      return true;
+
+    case "lowercase":
+      await sock.sendMessage(jid, {
+        text: text ? text.toLowerCase() : "❌ Écris un texte."
+      });
+      return true;
+
+    case "random":
+      await sock.sendMessage(jid, {
+        text: `🎲 Nombre aléatoire : ${Math.floor(Math.random() * 100000)}`
+      });
+      return true;
+
+    case "choose":
+      if (!text) {
+        await sock.sendMessage(jid, {
+          text: "❌ Exemple : .choose pizza,burger"
+        });
+        return true;
+      }
+
+      const choices = text
+        .split(",")
+        .map(x => x.trim())
+        .filter(Boolean);
+
+      if (!choices.length) return true;
+
+      await sock.sendMessage(jid, {
+        text: `🎯 Choix : ${choices[Math.floor(Math.random() * choices.length)]}`
+      });
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+module.exports = { handleExtra };
