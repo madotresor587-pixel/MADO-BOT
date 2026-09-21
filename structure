@@ -1,0 +1,15 @@
+MADO-BOT/
+├── package.json
+├── index.js
+├── config.js
+├── .env.example
+├── commands/
+│   ├── ai.js
+│   ├── general.js
+│   ├── tools.js
+│   └── owner.js
+├── lib/
+│   ├── menu.js
+│   └── helpers.js
+└── database/
+    └── .gitkeep
