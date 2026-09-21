@@ -85,3 +85,5 @@ async function startBot() {
 
 startBot();
 const { handleExtra } = require("./commands/extra");
+const { handleGroup } = require("./commands/group");
+const { handleMedia } = require("./commands/media");
