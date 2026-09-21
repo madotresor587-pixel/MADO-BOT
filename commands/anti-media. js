@@ -1,0 +1,101 @@
+const mediaSettings = new Map();
+
+function getMediaSettings(jid) {
+  if (!mediaSettings.has(jid)) {
+    mediaSettings.set(jid, {
+      antivocal: false,
+      antiimage: false,
+      antivideo: false,
+      antisticker: false,
+      antidocument: false,
+      anticontact: false
+    });
+  }
+
+  return mediaSettings.get(jid);
+}
+
+async function handleAntiMedia(command, args, sock, jid, message) {
+  if (!jid.endsWith("@g.us")) return false;
+
+  const commands = [
+    "antivocal",
+    "antiimage",
+    "antivideo",
+    "antisticker",
+    "antidocument",
+    "anticontact"
+  ];
+
+  if (!commands.includes(command)) return false;
+
+  const sender =
+    message.key.participant ||
+    message.key.remoteJid;
+
+  if (!["on", "off"].includes(args[0])) {
+    await sock.sendMessage(jid, {
+      text: `Utilisation : .${command} on/off`
+    });
+    return true;
+  }
+
+  const config = getMediaSettings(jid);
+  config[command] = args[0] === "on";
+
+  await sock.sendMessage(jid, {
+    text: `${config[command] ? "🟢" : "🔴"} ${command} ${config[command] ? "activé" : "désactivé"}.`
+  });
+
+  return true;
+}
+
+async function processAntiMedia(message, sock) {
+  const jid = message.key.remoteJid;
+
+  if (!jid?.endsWith("@g.us")) return;
+
+  const sender =
+    message.key.participant ||
+    message.key.remoteJid;
+
+  const config = getMediaSettings(jid);
+
+  const type = Object.keys(
+    message.message || {}
+  ).find(key =>
+    [
+      "audioMessage",
+      "imageMessage",
+      "videoMessage",
+      "stickerMessage",
+      "documentMessage",
+      "contactMessage"
+    ].includes(key)
+  );
+
+  if (!type) return;
+
+  const rules = {
+    audioMessage: "antivocal",
+    imageMessage: "antiimage",
+    videoMessage: "antivideo",
+    stickerMessage: "antisticker",
+    documentMessage: "antidocument",
+    contactMessage: "anticontact"
+  };
+
+  const rule = rules[type];
+
+  if (!config[rule]) return;
+
+  await sock.sendMessage(jid, {
+    text: `🚫 @${sender.split("@")[0]}, ce type de média est interdit dans le groupe.`,
+    mentions: [sender]
+  });
+}
+
+module.exports = {
+  handleAntiMedia,
+  processAntiMedia
+};
