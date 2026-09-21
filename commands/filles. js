@@ -1,0 +1,61 @@
+async function handleFiles(command, args, sock, jid) {
+  switch (command) {
+
+    case "mediahelp":
+      await sock.sendMessage(jid, {
+        text:
+          "📁 *OUTILS MÉDIAS*\n\n" +
+          "🖼️ .sticker — créer un sticker\n" +
+          "🖼️ .toimage — convertir un média en image\n" +
+          "🎵 .audio — traitement audio\n" +
+          "🎬 .video — traitement vidéo\n" +
+          "📁 .fileinfo — informations sur un fichier"
+      });
+      return true;
+
+    case "fileinfo":
+      await sock.sendMessage(jid, {
+        text:
+          "📁 *FILE INFO*\n\n" +
+          "Pour analyser un fichier, réponds à son message avec :\n" +
+          "`.fileinfo`\n\n" +
+          "🔎 Le module pourra ensuite afficher le type et les informations disponibles."
+      });
+      return true;
+
+    case "stickerinfo":
+      await sock.sendMessage(jid, {
+        text:
+          "🏷️ *STICKER INFO*\n\n" +
+          "Réponds à un sticker avec `.stickerinfo` pour analyser ses informations."
+      });
+      return true;
+
+    case "caption":
+      if (!args.length) {
+        await sock.sendMessage(jid, {
+          text: "❌ Exemple : .caption Ma nouvelle photo"
+        });
+        return true;
+      }
+
+      await sock.sendMessage(jid, {
+        text:
+          `📝 *LÉGENDE*\n\n${args.join(" ")}`
+      });
+      return true;
+
+    case "files":
+      await sock.sendMessage(jid, {
+        text:
+          "📂 *GESTION DES FICHIERS*\n\n" +
+          "MADO-BOT peut gérer les médias reçus dans les limites des fonctions disponibles."
+      });
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+module.exports = { handleFiles };
