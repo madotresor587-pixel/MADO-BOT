@@ -1,0 +1,72 @@
+const os = require("os");
+
+async function handleDiagnostic(command, args, sock, jid) {
+  switch (command) {
+
+    case "bug":
+    case "bugs":
+    case "diagnostic":
+      await sock.sendMessage(jid, {
+        text:
+          "🛠️ *DIAGNOSTIC MADO-BOT*\n\n" +
+          "🔍 Vérification en cours..."
+      });
+
+      try {
+        const memory = process.memoryUsage();
+
+        await sock.sendMessage(jid, {
+          text:
+            "✅ *DIAGNOSTIC TERMINÉ*\n\n" +
+            `🟢 Node.js : ${process.version}\n` +
+            `🟢 Système : ${os.platform()}\n` +
+            `🟢 Architecture : ${os.arch()}\n` +
+            `🧠 RAM utilisée : ${Math.round(memory.rss / 1024 / 1024)} MB\n` +
+            `⏱️ Uptime : ${Math.floor(process.uptime())} secondes\n\n` +
+            "ℹ️ Aucun test de réparation automatique n'a été effectué."
+        });
+      } catch (error) {
+        await sock.sendMessage(jid, {
+          text: `❌ Erreur du diagnostic : ${error.message}`
+        });
+      }
+
+      return true;
+
+    case "statusbot":
+      await sock.sendMessage(jid, {
+        text:
+          "📊 *ÉTAT DU BOT*\n\n" +
+          "🟢 Processus : actif\n" +
+          `🟢 Node.js : ${process.version}\n` +
+          `⏱️ Uptime : ${Math.floor(process.uptime())} secondes`
+      });
+      return true;
+
+    case "memory":
+      const memory = process.memoryUsage();
+
+      await sock.sendMessage(jid, {
+        text:
+          "🧠 *MÉMOIRE*\n\n" +
+          `RAM utilisée : ${Math.round(memory.rss / 1024 / 1024)} MB\n` +
+          `Heap utilisé : ${Math.round(memory.heapUsed / 1024 / 1024)} MB\n` +
+          `Heap total : ${Math.round(memory.heapTotal / 1024 / 1024)} MB`
+      });
+      return true;
+
+    case "uptime":
+      await sock.sendMessage(jid, {
+        text:
+          `⏱️ MADO-BOT est actif depuis *${Math.floor(
+            process.uptime()
+          )} secondes*.`
+      });
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+module.exports = { handleDiagnostic };
