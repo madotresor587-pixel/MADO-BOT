@@ -1,0 +1,80 @@
+async function handleAdvanced(command, args, sock, jid, message) {
+  switch (command) {
+
+    case "viewonce":
+      await sock.sendMessage(jid, {
+        text:
+          "👁️ *VUE UNIQUE*\n\n" +
+          "Réponds au média concerné avec `.viewonce`.\n" +
+          "MADO-BOT vérifiera si le média peut être traité."
+      });
+      return true;
+
+    case "vv":
+      await sock.sendMessage(jid, {
+        text:
+          "👁️ `.vv` est un raccourci de `.viewonce`.\n\n" +
+          "Réponds au média avec cette commande."
+      });
+      return true;
+
+    case "listmembers": {
+      if (!jid.endsWith("@g.us")) {
+        await sock.sendMessage(jid, {
+          text: "❌ Cette commande fonctionne uniquement dans un groupe."
+        });
+        return true;
+      }
+
+      const metadata = await sock.groupMetadata(jid);
+      const members = metadata.participants || [];
+
+      const list = members
+        .slice(0, 100)
+        .map(
+          (p, i) =>
+            `${i + 1}. @${p.id.split("@")[0]}`
+        )
+        .join("\n");
+
+      await sock.sendMessage(jid, {
+        text:
+          `👥 *MEMBRES DU GROUPE*\n\n${list}\n\n` +
+          `Total : ${members.length}`,
+        mentions: members.slice(0, 100).map(p => p.id)
+      });
+
+      return true;
+    }
+
+    case "kicklist":
+      await sock.sendMessage(jid, {
+        text:
+          "🛡️ *KICKLIST*\n\n" +
+          "Pour retirer un membre, utilise :\n" +
+          ".kick @membre\n\n" +
+          "Seuls les administrateurs peuvent utiliser cette action."
+      });
+      return true;
+
+    case "adminhelp":
+      await sock.sendMessage(jid, {
+        text:
+          "🛡️ *ADMIN MADO-BOT*\n\n" +
+          ".kick @membre\n" +
+          ".ban @membre\n" +
+          ".promote @membre\n" +
+          ".demote @membre\n" +
+          ".groupopen\n" +
+          ".groupclose\n" +
+          ".grouplink\n" +
+          ".listmembers"
+      });
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+module.exports = { handleAdvanced };
