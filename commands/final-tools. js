@@ -1,0 +1,192 @@
+const os = require("os");
+
+async function handleFinalTools(command, args, sock, jid) {
+  const text = args.join(" ");
+
+  switch (command) {
+
+    case "botname":
+      await sock.sendMessage(jid, {
+        text: "🤖 Nom du bot : *MADO-BOT*"
+      });
+      return true;
+
+    case "version":
+      await sock.sendMessage(jid, {
+        text: "📦 MADO-BOT version *1.0.0*"
+      });
+      return true;
+
+    case "author":
+      await sock.sendMessage(jid, {
+        text: "👑 Créateur : *MADO*"
+      });
+      return true;
+
+    case "language":
+    case "languages":
+      await sock.sendMessage(jid, {
+        text:
+          "🌍 *LANGUES*\n\n" +
+          "MADO-BOT peut utiliser plusieurs langues avec son module IA."
+      });
+      return true;
+
+    case "uptime2":
+      await sock.sendMessage(jid, {
+        text:
+          `⏱️ Temps actif : *${Math.floor(process.uptime())} secondes*`
+      });
+      return true;
+
+    case "memoryinfo": {
+      const mem = process.memoryUsage();
+
+      await sock.sendMessage(jid, {
+        text:
+          "🧠 *MÉMOIRE*\n\n" +
+          `RSS : ${Math.round(mem.rss / 1024 / 1024)} MB\n` +
+          `Heap utilisé : ${Math.round(mem.heapUsed / 1024 / 1024)} MB\n` +
+          `Heap total : ${Math.round(mem.heapTotal / 1024 / 1024)} MB`
+      });
+
+      return true;
+    }
+
+    case "serverinfo":
+      await sock.sendMessage(jid, {
+        text:
+          "🖥️ *SERVEUR*\n\n" +
+          `OS : ${os.platform()}\n` +
+          `CPU : ${os.cpus().length} cœur(s)\n` +
+          `Architecture : ${os.arch()}`
+      });
+      return true;
+
+    case "botstatus":
+      await sock.sendMessage(jid, {
+        text:
+          "📊 *MADO-BOT STATUS*\n\n" +
+          "🟢 Connexion : active\n" +
+          "🟢 Moteur : actif\n" +
+          "🟢 Commandes : disponibles"
+      });
+      return true;
+
+    case "date":
+      await sock.sendMessage(jid, {
+        text: `📅 ${new Date().toLocaleDateString()}`
+      });
+      return true;
+
+    case "clock":
+      await sock.sendMessage(jid, {
+        text: `🕐 ${new Date().toLocaleTimeString()}`
+      });
+      return true;
+
+    case "days":
+      await sock.sendMessage(jid, {
+        text:
+          "📆 *JOURS*\n\n" +
+          "Lundi • Mardi • Mercredi • Jeudi • Vendredi • Samedi • Dimanche"
+      });
+      return true;
+
+    case "months":
+      await sock.sendMessage(jid, {
+        text:
+          "📆 *MOIS*\n\n" +
+          "Janvier • Février • Mars • Avril • Mai • Juin\n" +
+          "Juillet • Août • Septembre • Octobre • Novembre • Décembre"
+      });
+      return true;
+
+    case "uppercase2":
+      await sock.sendMessage(jid, {
+        text: text
+          ? text.toUpperCase()
+          : "❌ Écris un texte."
+      });
+      return true;
+
+    case "lowercase2":
+      await sock.sendMessage(jid, {
+        text: text
+          ? text.toLowerCase()
+          : "❌ Écris un texte."
+      });
+      return true;
+
+    case "wordcount":
+      await sock.sendMessage(jid, {
+        text: text
+          ? `🔢 Nombre de mots : *${text.trim().split(/\s+/).length}*`
+          : "❌ Écris un texte."
+      });
+      return true;
+
+    case "charcount2":
+      await sock.sendMessage(jid, {
+        text: text
+          ? `🔤 Nombre de caractères : *${text.length}*`
+          : "❌ Écris un texte."
+      });
+      return true;
+
+    case "reverse2":
+      await sock.sendMessage(jid, {
+        text: text
+          ? text.split("").reverse().join("")
+          : "❌ Écris un texte."
+      });
+      return true;
+
+    case "repeat":
+      if (!text) {
+        await sock.sendMessage(jid, {
+          text: "❌ Exemple : .repeat Bonjour"
+        });
+        return true;
+      }
+
+      await sock.sendMessage(jid, {
+        text
+      });
+      return true;
+
+    case "emoji":
+      await sock.sendMessage(jid, {
+        text:
+          "😀 😎 😂 🔥 ❤️ 🎯 🚀 🤖 ⭐ 🎮 🥳"
+      });
+      return true;
+
+    case "toolhelp":
+      await sock.sendMessage(jid, {
+        text:
+          "🛠️ *OUTILS MADO-BOT*\n\n" +
+          ".botname\n" +
+          ".version\n" +
+          ".author\n" +
+          ".languages\n" +
+          ".botstatus\n" +
+          ".serverinfo\n" +
+          ".date\n" +
+          ".clock\n" +
+          ".days\n" +
+          ".months\n" +
+          ".wordcount\n" +
+          ".charcount2\n" +
+          ".reverse2\n" +
+          ".repeat\n" +
+          ".emoji"
+      });
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+module.exports = { handleFinalTools };
