@@ -1,0 +1,32 @@
+const { BOT_NAME } = require("../config");
+const { menu } = require("../lib/menu");
+
+async function handleGeneral(command, sock, jid) {
+  switch (command) {
+    case "menu":
+    case "help":
+      await sock.sendMessage(jid, { text: menu() });
+      return true;
+
+    case "ping":
+      await sock.sendMessage(jid, { text: "🏓 Pong ! MADO-BOT fonctionne." });
+      return true;
+
+    case "time":
+      await sock.sendMessage(jid, {
+        text: `🕐 ${new Date().toLocaleString()}`
+      });
+      return true;
+
+    case "info":
+      await sock.sendMessage(jid, {
+        text: `🤖 ${BOT_NAME}\n⚡ WhatsApp Bot\n🧠 Outils IA\n🛠️ Commandes pratiques`
+      });
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+module.exports = { handleGeneral };
