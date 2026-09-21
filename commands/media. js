@@ -1,0 +1,43 @@
+async function handleMedia(command, args, sock, jid) {
+  switch (command) {
+    case "sticker":
+      await sock.sendMessage(jid, {
+        text: "🖼️ Envoie une image avec la légende .sticker pour créer un sticker."
+      });
+      return true;
+
+    case "toimage":
+      await sock.sendMessage(jid, {
+        text: "🖼️ Fonction de conversion média à connecter au module média."
+      });
+      return true;
+
+    case "audio":
+      await sock.sendMessage(jid, {
+        text: "🎵 Fonction audio à connecter au module média."
+      });
+      return true;
+
+    case "video":
+      await sock.sendMessage(jid, {
+        text: "🎬 Fonction vidéo à connecter au module média."
+      });
+      return true;
+
+    case "mediahelp":
+      await sock.sendMessage(jid, {
+        text:
+          `🎬 *MADO-BOT MEDIA*\n\n` +
+          `• .sticker — créer un sticker\n` +
+          `• .toimage — conversion en image\n` +
+          `• .audio — traitement audio\n` +
+          `• .video — traitement vidéo`
+      });
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+module.exports = { handleMedia };
