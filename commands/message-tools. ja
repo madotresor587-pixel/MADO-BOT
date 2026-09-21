@@ -1,0 +1,103 @@
+async function handleMessageTools(command, args, sock, jid, message) {
+  switch (command) {
+
+    case "react":
+      await sock.sendMessage(jid, {
+        react: {
+          text: args[0] || "❤️",
+          key: message.key
+        }
+      });
+      return true;
+
+    case "like":
+      await sock.sendMessage(jid, {
+        react: {
+          text: "👍",
+          key: message.key
+        }
+      });
+      return true;
+
+    case "love":
+      await sock.sendMessage(jid, {
+        react: {
+          text: "❤️",
+          key: message.key
+        }
+      });
+      return true;
+
+    case "laugh":
+      await sock.sendMessage(jid, {
+        react: {
+          text: "😂",
+          key: message.key
+        }
+      });
+      return true;
+
+    case "fire":
+      await sock.sendMessage(jid, {
+        react: {
+          text: "🔥",
+          key: message.key
+        }
+      });
+      return true;
+
+    case "wow":
+      await sock.sendMessage(jid, {
+        react: {
+          text: "😮",
+          key: message.key
+        }
+      });
+      return true;
+
+    case "sad":
+      await sock.sendMessage(jid, {
+        react: {
+          text: "😢",
+          key: message.key
+        }
+      });
+      return true;
+
+    case "removeReaction":
+      await sock.sendMessage(jid, {
+        react: {
+          text: "",
+          key: message.key
+        }
+      });
+      return true;
+
+    case "quoted":
+      await sock.sendMessage(jid, {
+        text:
+          "💬 Pour utiliser cette fonction, réponds à un message puis utilise une commande compatible."
+      });
+      return true;
+
+    case "msghelp":
+      await sock.sendMessage(jid, {
+        text:
+          "💬 *COMMANDES MESSAGES*\n\n" +
+          ".react ❤️\n" +
+          ".like\n" +
+          ".love\n" +
+          ".laugh\n" +
+          ".fire\n" +
+          ".wow\n" +
+          ".sad\n" +
+          ".removeReaction"
+      });
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+module.exports = { handleMessageTools };
