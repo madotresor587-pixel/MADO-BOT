@@ -1,0 +1,200 @@
+function getSender(message) {
+  return (
+    message?.key?.participant ||
+    message?.key?.remoteJid ||
+    ""
+  );
+}
+
+function getMentioned(message) {
+  return (
+    message?.message?.extendedTextMessage
+      ?.contextInfo?.mentionedJid?.[0] || null
+  );
+}
+
+async function getMetadata(sock, jid) {
+  try {
+    return await sock.groupMetadata(jid);
+  } catch {
+    return null;
+  }
+}
+
+async function isAdmin(sock, jid, user) {
+  const metadata = await getMetadata(sock, jid);
+
+  if (!metadata) return false;
+
+  const member = metadata.participants.find(
+    p => p.id === user
+  );
+
+  return Boolean(
+    member &&
+    (member.admin === "admin" ||
+      member.admin === "superadmin")
+  );
+}
+
+async function handleAdmin(command, args, sock, jid, message) {
+  if (!jid.endsWith("@g.us")) {
+    await sock.sendMessage(jid, {
+      text: "❌ Cette commande fonctionne uniquement dans un groupe."
+    });
+    return true;
+  }
+
+  const sender = getSender(message);
+
+  if (!(await isAdmin(sock, jid, sender))) {
+    await sock.sendMessage(jid, {
+      text: "❌ Seuls les administrateurs peuvent utiliser cette commande."
+    });
+    return true;
+  }
+
+  const target = getMentioned(message);
+
+  if (
+    ["ban", "kick", "promote", "demote"].includes(command) &&
+    !target
+  ) {
+    await sock.sendMessage(jid, {
+      text:
+        `❌ Mentionne le membre concerné.\n\n` +
+        `Exemple : .${command} @membre`
+    });
+    return true;
+  }
+
+  switch (command) {
+
+    case "ban":
+    case "kick": {
+      if (target === sender) {
+        await sock.sendMessage(jid, {
+          text: "❌ Tu ne peux pas te retirer toi-même avec cette commande."
+        });
+        return true;
+      }
+
+      const metadata = await getMetadata(sock, jid);
+
+      if (!metadata) {
+        await sock.sendMessage(jid, {
+          text: "❌ Impossible de récupérer les informations du groupe."
+        });
+        return true;
+      }
+
+      const member = metadata.participants.find(
+        p => p.id === target
+      );
+
+      if (!member) {
+        await sock.sendMessage(jid, {
+          text: "❌ Ce membre n'est pas dans le groupe."
+        });
+        return true;
+      }
+
+      if (
+        member.admin === "admin" ||
+        member.admin === "superadmin"
+      ) {
+        await sock.sendMessage(jid, {
+          text: "❌ Impossible de retirer un administrateur avec cette commande."
+        });
+        return true;
+      }
+
+      try {
+        await sock.groupParticipantsUpdate(
+          jid,
+          [target],
+          "remove"
+        );
+
+        await sock.sendMessage(jid, {
+          text:
+            `✅ @${target.split("@")[0]} a été retiré du groupe.`,
+          mentions: [target]
+        });
+      } catch (error) {
+        await sock.sendMessage(jid, {
+          text:
+            "❌ Impossible de retirer ce membre. " +
+            "Vérifie que Mado est administrateur."
+        });
+      }
+
+      return true;
+    }
+
+    case "promote": {
+      try {
+        await sock.groupParticipantsUpdate(
+          jid,
+          [target],
+          "promote"
+        );
+
+        await sock.sendMessage(jid, {
+          text:
+            `👑 @${target.split("@")[0]} est maintenant administrateur.`,
+          mentions: [target]
+        });
+      } catch {
+        await sock.sendMessage(jid, {
+          text: "❌ Impossible de promouvoir ce membre."
+        });
+      }
+
+      return true;
+    }
+
+    case "demote": {
+      try {
+        await sock.groupParticipantsUpdate(
+          jid,
+          [target],
+          "demote"
+        );
+
+        await sock.sendMessage(jid, {
+          text:
+            `⬇️ @${target.split("@")[0]} n'est plus administrateur.`,
+          mentions: [target]
+        });
+      } catch {
+        await sock.sendMessage(jid, {
+          text: "❌ Impossible de retirer ses droits administrateur."
+        });
+      }
+
+      return true;
+    }
+
+    case "adminhelp": {
+      await sock.sendMessage(jid, {
+        text:
+          "👑 *COMMANDES ADMIN MADO*\n\n" +
+          "🚫 `.ban @membre`\n" +
+          "🚫 `.kick @membre`\n" +
+          "⬆️ `.promote @membre`\n" +
+          "⬇️ `.demote @membre`\n\n" +
+          "ℹ️ Mado doit être administrateur du groupe."
+      });
+
+      return true;
+    }
+
+    default:
+      return false;
+  }
+}
+
+module.exports = {
+  handleAdmin
+};
