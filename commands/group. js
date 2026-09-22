@@ -1,0 +1,131 @@
+async function getMetadata(sock, jid) {
+  try {
+    return await sock.groupMetadata(jid);
+  } catch {
+    return null;
+  }
+}
+
+function getNumber(jid) {
+  return String(jid || "")
+    .split("@")[0]
+    .split(":")[0];
+}
+
+async function handleGroup(command, args, sock, jid, message) {
+  if (!jid.endsWith("@g.us")) {
+    await sock.sendMessage(jid, {
+      text: "❌ Cette commande fonctionne uniquement dans un groupe."
+    });
+    return true;
+  }
+
+  const metadata = await getMetadata(sock, jid);
+
+  if (!metadata) {
+    await sock.sendMessage(jid, {
+      text: "❌ Impossible de récupérer les informations du groupe."
+    });
+    return true;
+  }
+
+  switch (command) {
+
+    case "groupinfo": {
+      const admins = metadata.participants.filter(
+        p =>
+          p.admin === "admin" ||
+          p.admin === "superadmin"
+      ).length;
+
+      await sock.sendMessage(jid, {
+        text:
+          `📋 *INFORMATIONS DU GROUPE*\n\n` +
+          `🏷️ Nom : *${metadata.subject || "Inconnu"}*\n` +
+          `👥 Membres : *${metadata.participants.length}*\n` +
+          `👑 Administrateurs : *${admins}*\n` +
+          `🆔 ID : ${jid}`
+      });
+
+      return true;
+    }
+
+    case "admins": {
+      const admins = metadata.participants.filter(
+        p =>
+          p.admin === "admin" ||
+          p.admin === "superadmin"
+      );
+
+      let text = "👑 *ADMINISTRATEURS*\n\n";
+
+      admins.forEach((admin, index) => {
+        const role =
+          admin.admin === "superadmin"
+            ? "Propriétaire"
+            : "Admin";
+
+        text +=
+          `${index + 1}. @${getNumber(admin.id)} — ${role}\n`;
+      });
+
+      await sock.sendMessage(jid, {
+        text,
+        mentions: admins.map(admin => admin.id)
+      });
+
+      return true;
+    }
+
+    case "members": {
+      const members = metadata.participants;
+
+      let text =
+        `👥 *MEMBRES DU GROUPE*\n\n` +
+        `Total : *${members.length}*\n\n`;
+
+      members.slice(0, 100).forEach((member, index) => {
+        text +=
+          `${index + 1}. @${getNumber(member.id)}\n`;
+      });
+
+      if (members.length > 100) {
+        text +=
+          `\n… et ${members.length - 100} autre(s).`;
+      }
+
+      await sock.sendMessage(jid, {
+        text,
+        mentions: members.slice(0, 100).map(
+          member => member.id
+        )
+      });
+
+      return true;
+    }
+
+    case "tagall": {
+      const members = metadata.participants;
+
+      let text = "📢 *TAG ALL*\n\n";
+
+      members.forEach(member => {
+        text += `@${getNumber(member.id)} `;
+      });
+
+      await sock.sendMessage(jid, {
+        text,
+        mentions: members.map(member => member.id)
+      });
+
+      return true;
+    }
+
+    default:
+      return false;
+  }
+}
+
+module.exports = {
+  handleGroup
+};
