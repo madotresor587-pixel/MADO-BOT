@@ -1,0 +1,215 @@
+const { loadDatabase, saveDatabase } = require("../lib/database");
+
+function getSender(message) {
+  return (
+    message?.key?.participant ||
+    message?.key?.remoteJid ||
+    ""
+  );
+}
+
+function getNumber(jid) {
+  return String(jid || "").split("@")[0].split(":")[0];
+}
+
+async function getGroupMetadata(sock, jid) {
+  try {
+    return await sock.groupMetadata(jid);
+  } catch {
+    return null;
+  }
+}
+
+async function isAdmin(sock, jid, user) {
+  const metadata = await getGroupMetadata(sock, jid);
+  if (!metadata) return false;
+
+  const member = metadata.participants.find(
+    p => p.id === user
+  );
+
+  return Boolean(
+    member &&
+    (member.admin === "admin" ||
+      member.admin === "superadmin")
+  );
+}
+
+async function handleAnti(command, args, sock, jid, message) {
+  if (!jid.endsWith("@g.us")) {
+    await sock.sendMessage(jid, {
+      text: "❌ Cette commande fonctionne uniquement dans un groupe."
+    });
+    return true;
+  }
+
+  const sender = getSender(message);
+
+  if (!(await isAdmin(sock, jid, sender))) {
+    await sock.sendMessage(jid, {
+      text: "❌ Seuls les administrateurs peuvent modifier la protection."
+    });
+    return true;
+  }
+
+  const db = loadDatabase();
+
+  if (!db.groups[jid]) {
+    db.groups[jid] = {};
+  }
+
+  if (!db.groups[jid].anti) {
+    db.groups[jid].anti = {};
+  }
+
+  const anti = db.groups[jid].anti;
+
+  const settings = {
+    antilink: "antilink",
+    antispam: "antispam",
+    antiflood: "antiflood",
+    anticaps: "anticaps",
+    antiword: "antiword",
+    antimention: "antimention",
+    antirepeat: "antirepeat",
+    antibot: "antibot"
+  };
+
+  if (command === "antis") {
+    let text = "🛡️ *PROTECTIONS MADO*\n\n";
+
+    for (const [commandName, key] of Object.entries(settings)) {
+      text += `${anti[key] ? "🟢" : "🔴"} .${commandName}\n`;
+    }
+
+    text +=
+      "\nPour modifier :\n" +
+      "`.antilink on/off`\n" +
+      "`.antispam on/off`\n" +
+      "`.antiflood on/off`\n" +
+      "`.anticaps on/off`\n" +
+      "`.antiword on/off`\n" +
+      "`.antimention on/off`\n" +
+      "`.antirepeat on/off`\n" +
+      "`.antibot on/off`";
+
+    await sock.sendMessage(jid, { text });
+    return true;
+  }
+
+  const key = settings[command];
+
+  if (!key) return false;
+
+  const option = String(args[0] || "").toLowerCase();
+
+  if (!["on", "off"].includes(option)) {
+    await sock.sendMessage(jid, {
+      text:
+        `🛡️ *${command}*\n\n` +
+        `État : ${anti[key] ? "🟢 Activé" : "🔴 Désactivé"}\n\n` +
+        `Utilisation : .${command} on/off`
+    });
+
+    return true;
+  }
+
+  anti[key] = option === "on";
+
+  saveDatabase(db);
+
+  await sock.sendMessage(jid, {
+    text:
+      `${anti[key] ? "🟢" : "🔴"} *${command}* ` +
+      `${anti[key] ? "activé" : "désactivé"}.`
+  });
+
+  return true;
+}
+
+async function processAnti(message, sock) {
+  try {
+    const jid = message?.key?.remoteJid;
+
+    if (!jid || !jid.endsWith("@g.us")) {
+      return false;
+    }
+
+    const db = loadDatabase();
+    const settings = db.groups[jid]?.anti;
+
+    if (!settings) return false;
+
+    const sender = getSender(message);
+
+    // Les administrateurs ne sont pas concernés
+    if (await isAdmin(sock, jid, sender)) {
+      return false;
+    }
+
+    const text =
+      message?.message?.conversation ||
+      message?.message?.extendedTextMessage?.text ||
+      message?.message?.imageMessage?.caption ||
+      message?.message?.videoMessage?.caption ||
+      "";
+
+    if (!text) return false;
+
+    // Anti-liens
+    if (
+      settings.antilink &&
+      /(https?:\/\/|www\.|chat\.whatsapp\.com\/|wa\.me\/)/i.test(text)
+    ) {
+      await sock.sendMessage(jid, {
+        text:
+          `🚫 @${getNumber(sender)}, les liens ne sont pas autorisés.`,
+        mentions: [sender]
+      });
+
+      return true;
+    }
+
+    // Anti-CAPS
+    const letters = text.replace(/[^A-Za-zÀ-ÿ]/g, "");
+
+    if (
+      settings.anticaps &&
+      letters.length >= 10 &&
+      letters === letters.toUpperCase()
+    ) {
+      await sock.sendMessage(jid, {
+        text:
+          `⚠️ @${getNumber(sender)}, évite les messages entièrement en majuscules.`,
+        mentions: [sender]
+      });
+
+      return true;
+    }
+
+    // Anti-mentions excessives
+    const mentions =
+      message?.message?.extendedTextMessage
+        ?.contextInfo?.mentionedJid || [];
+
+    if (settings.antimention && mentions.length >= 5) {
+      await sock.sendMessage(jid, {
+        text:
+          `⚠️ @${getNumber(sender)}, trop de mentions dans un seul message.`,
+        mentions: [sender]
+      });
+
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.log("⚠️ Erreur anti :", error.message);
+    return false;
+  }
+}
+
+module.exports = {
+  handleAnti,
+  processAnti
+};
