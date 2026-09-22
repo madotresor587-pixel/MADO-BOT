@@ -1,0 +1,214 @@
+const { loadDatabase, saveDatabase } = require("../lib/database");
+
+function getSender(message) {
+  return (
+    message?.key?.participant ||
+    message?.key?.remoteJid ||
+    ""
+  );
+}
+
+function getNumber(jid) {
+  return String(jid || "").split("@")[0].split(":")[0];
+}
+
+async function getGroupMetadata(sock, jid) {
+  try {
+    return await sock.groupMetadata(jid);
+  } catch {
+    return null;
+  }
+}
+
+async function isAdmin(sock, jid, sender) {
+  const metadata = await getGroupMetadata(sock, jid);
+
+  if (!metadata) return false;
+
+  const participant = metadata.participants.find(
+    p => p.id === sender
+  );
+
+  return Boolean(
+    participant &&
+    (participant.admin === "admin" ||
+      participant.admin === "superadmin")
+  );
+}
+
+async function handleModeration(command, args, sock, jid, message) {
+  if (!jid.endsWith("@g.us")) {
+    await sock.sendMessage(jid, {
+      text: "❌ Cette commande fonctionne uniquement dans un groupe."
+    });
+    return true;
+  }
+
+  const sender = getSender(message);
+
+  if (!(await isAdmin(sock, jid, sender))) {
+    await sock.sendMessage(jid, {
+      text: "❌ Cette commande est réservée aux administrateurs."
+    });
+    return true;
+  }
+
+  const db = loadDatabase();
+
+  if (!db.warnings[jid]) {
+    db.warnings[jid] = {};
+  }
+
+  switch (command) {
+
+    case "warn": {
+      const target =
+        message?.message?.extendedTextMessage?.contextInfo
+          ?.mentionedJid?.[0];
+
+      if (!target) {
+        await sock.sendMessage(jid, {
+          text: "⚠️ Mentionne le membre à avertir.\n\nExemple : .warn @membre"
+        });
+        return true;
+      }
+
+      db.warnings[jid][target] =
+        (db.warnings[jid][target] || 0) + 1;
+
+      const count = db.warnings[jid][target];
+
+      saveDatabase(db);
+
+      await sock.sendMessage(jid, {
+        text:
+          `⚠️ *Avertissement*\n\n` +
+          `👤 @${getNumber(target)}\n` +
+          `📊 Avertissements : *${count}*`,
+        mentions: [target]
+      });
+
+      return true;
+    }
+
+    case "warnings": {
+      const target =
+        message?.message?.extendedTextMessage?.contextInfo
+          ?.mentionedJid?.[0];
+
+      if (target) {
+        const count = db.warnings[jid][target] || 0;
+
+        await sock.sendMessage(jid, {
+          text:
+            `⚠️ Avertissements de @${getNumber(target)} : *${count}*`,
+          mentions: [target]
+        });
+
+        return true;
+      }
+
+      const entries = Object.entries(db.warnings[jid]);
+
+      if (!entries.length) {
+        await sock.sendMessage(jid, {
+          text: "✅ Aucun avertissement enregistré."
+        });
+        return true;
+      }
+
+      let text = "⚠️ *Avertissements du groupe*\n\n";
+
+      entries.forEach(([user, count], index) => {
+        text += `${index + 1}. @${getNumber(user)} — *${count}*\n`;
+      });
+
+      await sock.sendMessage(jid, {
+        text,
+        mentions: entries.map(([user]) => user)
+      });
+
+      return true;
+    }
+
+    case "clearwarn": {
+      const target =
+        message?.message?.extendedTextMessage?.contextInfo
+          ?.mentionedJid?.[0];
+
+      if (!target) {
+        await sock.sendMessage(jid, {
+          text: "⚠️ Mentionne le membre concerné.\n\nExemple : .clearwarn @membre"
+        });
+        return true;
+      }
+
+      delete db.warnings[jid][target];
+
+      saveDatabase(db);
+
+      await sock.sendMessage(jid, {
+        text: `✅ Avertissements supprimés pour @${getNumber(target)}.`,
+        mentions: [target]
+      });
+
+      return true;
+    }
+
+    case "groupadmins": {
+      const metadata = await getGroupMetadata(sock, jid);
+
+      if (!metadata) {
+        await sock.sendMessage(jid, {
+          text: "❌ Impossible de récupérer les administrateurs."
+        });
+        return true;
+      }
+
+      const admins = metadata.participants.filter(
+        p =>
+          p.admin === "admin" ||
+          p.admin === "superadmin"
+      );
+
+      let text = "👑 *Administrateurs du groupe*\n\n";
+
+      admins.forEach((admin, index) => {
+        text += `${index + 1}. @${getNumber(admin.id)}\n`;
+      });
+
+      await sock.sendMessage(jid, {
+        text,
+        mentions: admins.map(admin => admin.id)
+      });
+
+      return true;
+    }
+
+    case "membercount": {
+      const metadata = await getGroupMetadata(sock, jid);
+
+      if (!metadata) {
+        await sock.sendMessage(jid, {
+          text: "❌ Impossible de récupérer les membres."
+        });
+        return true;
+      }
+
+      await sock.sendMessage(jid, {
+        text:
+          `👥 *Membres du groupe*\n\n` +
+          `📊 Total : *${metadata.participants.length}*`
+      });
+
+      return true;
+    }
+
+    default:
+      return false;
+  }
+}
+
+module.exports = {
+  handleModeration
+};
