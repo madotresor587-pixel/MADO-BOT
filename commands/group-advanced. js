@@ -1,0 +1,108 @@
+async function metadata(sock, jid) {
+  try {
+    return await sock.groupMetadata(jid);
+  } catch {
+    return null;
+  }
+}
+
+function num(jid) {
+  return String(jid || "").split("@")[0].split(":")[0];
+}
+
+async function handleGroupAdvanced(command, args, sock, jid, message) {
+  if (!jid.endsWith("@g.us")) {
+    await sock.sendMessage(jid, { text: "❌ Groupe uniquement." });
+    return true;
+  }
+
+  const data = await metadata(sock, jid);
+
+  if (!data) {
+    await sock.sendMessage(jid, {
+      text: "❌ Informations du groupe indisponibles."
+    });
+    return true;
+  }
+
+  switch (command) {
+    case "adminslist":
+    case "tagadmins": {
+      const admins = data.participants.filter(
+        p => p.admin === "admin" || p.admin === "superadmin"
+      );
+
+      const text =
+        "👑 *ADMINISTRATEURS*\n\n" +
+        admins.map(p => `@${num(p.id)}`).join("\n");
+
+      await sock.sendMessage(jid, {
+        text,
+        mentions: admins.map(p => p.id)
+      });
+      return true;
+    }
+
+    case "groupmembers": {
+      await sock.sendMessage(jid, {
+        text: `👥 Membres : *${data.participants.length}*`
+      });
+      return true;
+    }
+
+    case "groupdesc":
+      await sock.sendMessage(jid, {
+        text: `📝 Description :\n${data.desc || "Aucune description"}`
+      });
+      return true;
+
+    case "groupname":
+      await sock.sendMessage(jid, {
+        text: `🏷️ Nom : *${data.subject}*`
+      });
+      return true;
+
+    case "groupstatus":
+      await sock.sendMessage(jid, {
+        text:
+          `📊 *STATUT DU GROUPE*\n\n` +
+          `🏷️ ${data.subject}\n` +
+          `👥 ${data.participants.length} membres`
+      });
+      return true;
+
+    case "botadmin": {
+      const botId = sock.user?.id;
+      const bot = data.participants.find(
+        p => p.id === botId ||
+        p.id?.split(":")[0] === botId?.split(":")[0]
+      );
+
+      await sock.sendMessage(jid, {
+        text:
+          bot?.admin
+            ? "🤖 Mado est administrateur."
+            : "⚠️ Mado n'est pas administrateur."
+      });
+      return true;
+    }
+
+    case "grouphelp":
+      await sock.sendMessage(jid, {
+        text:
+          "🛠️ *OUTILS GROUPE*\n\n" +
+          ".adminslist\n" +
+          ".groupmembers\n" +
+          ".groupdesc\n" +
+          ".groupname\n" +
+          ".groupstatus\n" +
+          ".botadmin"
+      });
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+module.exports = { handleGroupAdvanced };
