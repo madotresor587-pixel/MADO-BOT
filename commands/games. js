@@ -1,0 +1,66 @@
+async function handleGames(command, args, sock, jid) {
+  switch (command) {
+    case "hello":
+      await sock.sendMessage(jid, {
+        text: "👋 Salut ! Moi c'est Mado 🤖"
+      });
+      return true;
+
+    case "goodmorning":
+      await sock.sendMessage(jid, {
+        text: "🌅 Bonjour ! Bonne journée avec Mado 🤖"
+      });
+      return true;
+
+    case "goodnight":
+      await sock.sendMessage(jid, {
+        text: "🌙 Bonne nuit ! À bientôt 👋"
+      });
+      return true;
+
+    case "motivation":
+      await sock.sendMessage(jid, {
+        text: "🔥 Continue tes efforts. Chaque étape compte !"
+      });
+      return true;
+
+    case "randomemoji": {
+      const emojis = ["😀", "😂", "🔥", "❤️", "😎", "🤖", "🎮", "⭐"];
+
+      await sock.sendMessage(jid, {
+        text: emojis[Math.floor(Math.random() * emojis.length)]
+      });
+      return true;
+    }
+
+    case "luck":
+      await sock.sendMessage(jid, {
+        text:
+          `🍀 Ta chance aujourd'hui : *${
+            Math.floor(Math.random() * 101)
+          }%*`
+      });
+      return true;
+
+    case "gamehelp":
+      await sock.sendMessage(jid, {
+        text:
+          "🎮 *JEUX MADO*\n\n" +
+          ".dicegame\n" +
+          ".coinflip\n" +
+          ".truth\n" +
+          ".dare\n" +
+          ".randomemoji\n" +
+          ".numbergame\n" +
+          ".riddle\n" +
+          ".luck\n" +
+          ".quizrandom"
+      });
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+module.exports = { handleGames };
