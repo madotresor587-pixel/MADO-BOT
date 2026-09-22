@@ -1,0 +1,49 @@
+const { menu } = require("../lib/menu");
+const { BOT_NAME, PREFIX, VERSION } = require("../config");
+
+async function handleGeneral(command, args, sock, jid, message) {
+  switch (command) {
+
+    case "menu":
+    case "help":
+      await sock.sendMessage(jid, {
+        text: menu()
+      });
+      return true;
+
+    case "ping":
+      await sock.sendMessage(jid, {
+        text: "🏓 Pong !\n🤖 Mado est en ligne."
+      });
+      return true;
+
+    case "time": {
+      const now = new Date();
+
+      await sock.sendMessage(jid, {
+        text:
+          `🕐 *Heure actuelle*\n\n` +
+          `${now.toLocaleTimeString("fr-FR")}`
+      });
+      return true;
+    }
+
+    case "info":
+      await sock.sendMessage(jid, {
+        text:
+          `🤖 *${BOT_NAME}*\n\n` +
+          `📦 Version : ${VERSION}\n` +
+          `⚙️ Préfixe : ${PREFIX}\n` +
+          `🌍 Multilingue : Oui\n` +
+          `📡 État : En ligne`
+      });
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+module.exports = {
+  handleGeneral
+};
