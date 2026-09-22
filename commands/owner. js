@@ -1,0 +1,54 @@
+const { OWNER_NUMBER } = require("../config");
+
+function getSender(message) {
+  return (
+    message?.key?.participant ||
+    message?.key?.remoteJid ||
+    ""
+  );
+}
+
+function getNumber(jid) {
+  return String(jid || "")
+    .split("@")[0]
+    .split(":")[0];
+}
+
+function isOwner(message) {
+  return getNumber(getSender(message)) ===
+    String(OWNER_NUMBER).replace(/\D/g, "");
+}
+
+async function handleOwner(command, sock, jid, message) {
+  if (!isOwner(message)) {
+    await sock.sendMessage(jid, {
+      text: "❌ Commande réservée au propriétaire de Mado."
+    });
+    return true;
+  }
+
+  switch (command) {
+    case "owner":
+      await sock.sendMessage(jid, {
+        text:
+          "👑 *PROPRIÉTAIRE DE MADO*\n\n" +
+          `📱 +${String(OWNER_NUMBER).replace(/\D/g, "")}`
+      });
+      return true;
+
+    case "botinfo":
+      await sock.sendMessage(jid, {
+        text:
+          "🤖 *MADO*\n\n" +
+          "⚙️ Mode propriétaire actif."
+      });
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+module.exports = {
+  handleOwner
+};
