@@ -1,0 +1,36 @@
+async function handleTools(command, args, sock, jid) {
+  const text = args.join(" ").trim();
+
+  switch (command) {
+    case "say":
+    case "echo":
+      if (!text) {
+        await sock.sendMessage(jid, {
+          text: "❌ Exemple : .say Bonjour"
+        });
+        return true;
+      }
+
+      await sock.sendMessage(jid, { text });
+      return true;
+
+    case "date": {
+      const now = new Date();
+
+      await sock.sendMessage(jid, {
+        text:
+          `📅 ${now.toLocaleDateString("fr-FR")}\n` +
+          `🕐 ${now.toLocaleTimeString("fr-FR")}`
+      });
+
+      return true;
+    }
+
+    default:
+      return false;
+  }
+}
+
+module.exports = {
+  handleTools
+};
