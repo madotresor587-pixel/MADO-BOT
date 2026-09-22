@@ -1,0 +1,44 @@
+const crypto = require("crypto");
+
+async function handleUtility(command, args, sock, jid) {
+  const text = args.join(" ").trim();
+
+  switch (command) {
+    case "uuid":
+      await sock.sendMessage(jid, {
+        text: `🆔 ${crypto.randomUUID()}`
+      });
+      return true;
+
+    case "timestamp":
+      await sock.sendMessage(jid, {
+        text: `⏱️ ${Date.now()}`
+      });
+      return true;
+
+    case "charcount":
+    case "words":
+    case "wordcount": {
+      if (!text) {
+        await sock.sendMessage(jid, {
+          text: "❌ Écris un texte."
+        });
+        return true;
+      }
+
+      const words = text.split(/\s+/).filter(Boolean).length;
+
+      await sock.sendMessage(jid, {
+        text:
+          `📝 Caractères : *${text.length}*\n` +
+          `🔤 Mots : *${words}*`
+      });
+      return true;
+    }
+
+    default:
+      return false;
+  }
+}
+
+module.exports = { handleUtility };
