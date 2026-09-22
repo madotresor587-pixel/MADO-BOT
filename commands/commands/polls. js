@@ -1,0 +1,243 @@
+const { loadDatabase, saveDatabase } = require("../lib/database");
+
+function getSender(message) {
+  return (
+    message?.key?.participant ||
+    message?.key?.remoteJid ||
+    ""
+  );
+}
+
+function getNumber(jid) {
+  return String(jid || "")
+    .split("@")[0]
+    .split(":")[0];
+}
+
+function getPoll(db, jid) {
+  if (!db.polls[jid]) return null;
+
+  const poll = db.polls[jid];
+
+  if (!poll.votes || typeof poll.votes !== "object") {
+    poll.votes = {};
+  }
+
+  return poll;
+}
+
+async function handlePolls(command, args, sock, jid, message) {
+  if (!jid.endsWith("@g.us")) {
+    await sock.sendMessage(jid, {
+      text: "❌ Les sondages fonctionnent uniquement dans les groupes."
+    });
+    return true;
+  }
+
+  const db = loadDatabase();
+
+  switch (command) {
+
+    case "poll": {
+      const content = args.join(" ");
+
+      const parts = content
+        .split("|")
+        .map(x => x.trim())
+        .filter(Boolean);
+
+      if (parts.length < 3) {
+        await sock.sendMessage(jid, {
+          text:
+            "📊 *Créer un sondage*\n\n" +
+            "Utilisation :\n" +
+            "`.poll Question | Option 1 | Option 2`\n\n" +
+            "Exemple :\n" +
+            "`.poll Quel jeu préfères-tu ? | FIFA | PES`"
+        });
+        return true;
+      }
+
+      const question = parts[0];
+      const options = parts.slice(1);
+
+      if (options.length > 10) {
+        await sock.sendMessage(jid, {
+          text: "❌ Maximum : 10 options."
+        });
+        return true;
+      }
+
+      db.polls[jid] = {
+        question,
+        options,
+        votes: {},
+        createdAt: Date.now(),
+        createdBy: getSender(message)
+      };
+
+      saveDatabase(db);
+
+      let text =
+        `📊 *${question}*\n\n`;
+
+      options.forEach((option, index) => {
+        text += `${index + 1}. ${option}\n`;
+      });
+
+      text +=
+        "\n👉 Vote avec : `.vote numéro`\n" +
+        "Exemple : `.vote 1`";
+
+      await sock.sendMessage(jid, { text });
+
+      return true;
+    }
+
+    case "vote": {
+      const poll = getPoll(db, jid);
+
+      if (!poll) {
+        await sock.sendMessage(jid, {
+          text: "❌ Aucun sondage actif."
+        });
+        return true;
+      }
+
+      const choice = Number(args[0]);
+
+      if (
+        !Number.isInteger(choice) ||
+        choice < 1 ||
+        choice > poll.options.length
+      ) {
+        await sock.sendMessage(jid, {
+          text:
+            `❌ Choix invalide.\n` +
+            `Choisis un nombre entre 1 et ${poll.options.length}.`
+        });
+        return true;
+      }
+
+      const sender = getSender(message);
+
+      if (!sender) {
+        await sock.sendMessage(jid, {
+          text: "❌ Impossible d'identifier ton compte."
+        });
+        return true;
+      }
+
+      if (poll.votes[sender]) {
+        await sock.sendMessage(jid, {
+          text:
+            `⚠️ @${getNumber(sender)}, tu as déjà voté.`,
+          mentions: [sender]
+        });
+        return true;
+      }
+
+      poll.votes[sender] = choice;
+
+      saveDatabase(db);
+
+      await sock.sendMessage(jid, {
+        text:
+          `✅ @${getNumber(sender)}, ton vote pour ` +
+          `*${poll.options[choice - 1]}* a été enregistré.`,
+        mentions: [sender]
+      });
+
+      return true;
+    }
+
+    case "pollresult": {
+      const poll = getPoll(db, jid);
+
+      if (!poll) {
+        await sock.sendMessage(jid, {
+          text: "❌ Aucun sondage actif."
+        });
+        return true;
+      }
+
+      const counts = poll.options.map(() => 0);
+
+      Object.values(poll.votes).forEach(choice => {
+        const index = Number(choice) - 1;
+
+        if (index >= 0 && index < counts.length) {
+          counts[index]++;
+        }
+      });
+
+      const total = counts.reduce(
+        (sum, value) => sum + value,
+        0
+      );
+
+      let text =
+        `📊 *Résultats du sondage*\n\n` +
+        `❓ ${poll.question}\n\n`;
+
+      poll.options.forEach((option, index) => {
+        const votes = counts[index];
+
+        const percentage =
+          total > 0
+            ? Math.round((votes / total) * 100)
+            : 0;
+
+        text +=
+          `${index + 1}. ${option}\n` +
+          `   🗳️ ${votes} vote(s) — ${percentage}%\n\n`;
+      });
+
+      text += `👥 Total : *${total}* vote(s)`;
+
+      await sock.sendMessage(jid, { text });
+
+      return true;
+    }
+
+    case "pollclose": {
+      if (!getPoll(db, jid)) {
+        await sock.sendMessage(jid, {
+          text: "❌ Aucun sondage actif."
+        });
+        return true;
+      }
+
+      delete db.polls[jid];
+
+      saveDatabase(db);
+
+      await sock.sendMessage(jid, {
+        text: "🔒 Sondage fermé avec succès."
+      });
+
+      return true;
+    }
+
+    case "pollhelp": {
+      await sock.sendMessage(jid, {
+        text:
+          "📊 *AIDE SONDAGES MADO*\n\n" +
+          "📝 `.poll question | option 1 | option 2`\n" +
+          "🗳️ `.vote 1`\n" +
+          "📊 `.pollresult`\n" +
+          "🔒 `.pollclose`\n" +
+          "❓ `.pollhelp`"
+      });
+
+      return true;
+    }
+
+    default:
+      return false;
+  }
+}
+
+module.exports = {
+  handlePolls
+};
