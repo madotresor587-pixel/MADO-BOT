@@ -1,0 +1,116 @@
+async function getMetadata(sock, jid) {
+  try {
+    return await sock.groupMetadata(jid);
+  } catch {
+    return null;
+  }
+}
+
+function getNumber(jid) {
+  return String(jid || "")
+    .split("@")[0]
+    .split(":")[0];
+}
+
+async function handleGroupInfo(command, args, sock, jid, message) {
+  if (!jid.endsWith("@g.us")) {
+    await sock.sendMessage(jid, {
+      text: "❌ Cette commande fonctionne uniquement dans un groupe."
+    });
+    return true;
+  }
+
+  const metadata = await getMetadata(sock, jid);
+
+  if (!metadata) {
+    await sock.sendMessage(jid, {
+      text: "❌ Impossible de récupérer les informations du groupe."
+    });
+    return true;
+  }
+
+  switch (command) {
+
+    case "groupowner": {
+      const owner =
+        metadata.owner ||
+        metadata.participants.find(
+          p => p.admin === "superadmin"
+        )?.id;
+
+      await sock.sendMessage(jid, {
+        text: owner
+          ? `👑 Propriétaire : @${getNumber(owner)}`
+          : "ℹ️ Propriétaire introuvable.",
+        mentions: owner ? [owner] : []
+      });
+
+      return true;
+    }
+
+    case "grouptime": {
+      const created = metadata.creation
+        ? new Date(metadata.creation * 1000)
+        : null;
+
+      await sock.sendMessage(jid, {
+        text: created
+          ? `🕐 Groupe créé le : *${created.toLocaleString("fr-FR")}*`
+          : "ℹ️ Date de création indisponible."
+      });
+
+      return true;
+    }
+
+    case "groupcreated": {
+      const created = metadata.creation
+        ? new Date(metadata.creation * 1000)
+        : null;
+
+      await sock.sendMessage(jid, {
+        text: created
+          ? `📅 Créé le : *${created.toLocaleDateString("fr-FR")}*`
+          : "ℹ️ Date de création indisponible."
+      });
+
+      return true;
+    }
+
+    case "groupid":
+      await sock.sendMessage(jid, {
+        text: `🆔 *ID du groupe*\n\n${jid}`
+      });
+      return true;
+
+    case "myrole": {
+      const sender =
+        message?.key?.participant ||
+        message?.key?.remoteJid;
+
+      const member = metadata.participants.find(
+        p => p.id === sender
+      );
+
+      let role = "👤 Membre";
+
+      if (member?.admin === "superadmin") {
+        role = "👑 Propriétaire";
+      } else if (member?.admin === "admin") {
+        role = "🛡️ Administrateur";
+      }
+
+      await sock.sendMessage(jid, {
+        text: `🎭 Ton rôle : *${role}*`
+      });
+
+      return true;
+    }
+
+    default:
+      return false;
+  }
+}
+
+module.exports = {
+  handleGroupInfo
+};
