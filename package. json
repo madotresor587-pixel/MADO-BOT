@@ -1,0 +1,29 @@
+{
+  "name": "mado-bot",
+  "version": "2.0.0",
+  "description": "MADO-BOT - WhatsApp bot multifonction avec outils IA, groupes, jeux et utilitaires",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "keywords": [
+    "mado-bot",
+    "whatsapp",
+    "bot",
+    "ai",
+    "baileys",
+    "termux"
+  ],
+  "author": "MADO",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "latest",
+    "axios": "latest",
+    "dotenv": "latest",
+    "pino": "latest"
+  }
+}
