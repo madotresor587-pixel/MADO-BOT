@@ -1,0 +1,163 @@
+const { loadDatabase, saveDatabase } = require("../lib/database");
+
+function getSender(message) {
+  return (
+    message?.key?.participant ||
+    message?.key?.remoteJid ||
+    ""
+  );
+}
+
+async function getGroupMetadata(sock, jid) {
+  try {
+    return await sock.groupMetadata(jid);
+  } catch {
+    return null;
+  }
+}
+
+async function isAdmin(sock, jid, user) {
+  const metadata = await getGroupMetadata(sock, jid);
+  if (!metadata) return false;
+
+  const member = metadata.participants.find(
+    p => p.id === user
+  );
+
+  return Boolean(
+    member &&
+    (member.admin === "admin" ||
+      member.admin === "superadmin")
+  );
+}
+
+async function handleAntiMedia(command, args, sock, jid, message) {
+  if (!jid.endsWith("@g.us")) {
+    await sock.sendMessage(jid, {
+      text: "❌ Cette commande fonctionne uniquement dans un groupe."
+    });
+    return true;
+  }
+
+  const sender = getSender(message);
+
+  if (!(await isAdmin(sock, jid, sender))) {
+    await sock.sendMessage(jid, {
+      text: "❌ Seuls les administrateurs peuvent modifier la protection."
+    });
+    return true;
+  }
+
+  const db = loadDatabase();
+
+  if (!db.groups[jid]) {
+    db.groups[jid] = {};
+  }
+
+  if (!db.groups[jid].antiMedia) {
+    db.groups[jid].antiMedia = {};
+  }
+
+  const settings = {
+    antivocal: "antivocal",
+    antiimage: "antiimage",
+    antivideo: "antivideo",
+    antisticker: "antisticker",
+    antidocument: "antidocument",
+    anticontact: "anticontact"
+  };
+
+  const key = settings[command];
+
+  if (!key) return false;
+
+  const option = String(args[0] || "").toLowerCase();
+
+  if (!["on", "off"].includes(option)) {
+    await sock.sendMessage(jid, {
+      text:
+        `🛡️ *${command}*\n\n` +
+        `État : ${
+          db.groups[jid].antiMedia[key]
+            ? "🟢 Activé"
+            : "🔴 Désactivé"
+        }\n\n` +
+        `Utilisation : .${command} on/off`
+    });
+
+    return true;
+  }
+
+  db.groups[jid].antiMedia[key] = option === "on";
+
+  saveDatabase(db);
+
+  await sock.sendMessage(jid, {
+    text:
+      `${db.groups[jid].antiMedia[key] ? "🟢" : "🔴"} ` +
+      `*${command}* ${
+        db.groups[jid].antiMedia[key]
+          ? "activé"
+          : "désactivé"
+      }.`
+  });
+
+  return true;
+}
+
+async function processAntiMedia(message, sock) {
+  try {
+    const jid = message?.key?.remoteJid;
+
+    if (!jid || !jid.endsWith("@g.us")) {
+      return false;
+    }
+
+    const db = loadDatabase();
+    const settings = db.groups[jid]?.antiMedia;
+
+    if (!settings) return false;
+
+    const sender = getSender(message);
+
+    if (await isAdmin(sock, jid, sender)) {
+      return false;
+    }
+
+    const msg = message?.message;
+
+    if (!msg) return false;
+
+    let type = null;
+
+    if (msg.audioMessage) type = "antivocal";
+    else if (msg.imageMessage) type = "antiimage";
+    else if (msg.videoMessage) type = "antivideo";
+    else if (msg.stickerMessage) type = "antisticker";
+    else if (msg.documentMessage) type = "antidocument";
+    else if (msg.contactMessage || msg.contactsArrayMessage) {
+      type = "anticontact";
+    }
+
+    if (!type || !settings[type]) {
+      return false;
+    }
+
+    await sock.sendMessage(jid, {
+      text:
+        `⚠️ @${String(sender).split("@")[0]}, ` +
+        `ce type de média est désactivé dans ce groupe.`,
+      mentions: [sender]
+    });
+
+    return true;
+  } catch (error) {
+    console.log("⚠️ Erreur anti-media :", error.message);
+    return false;
+  }
+}
+
+module.exports = {
+  handleAntiMedia,
+  processAntiMedia
+};
