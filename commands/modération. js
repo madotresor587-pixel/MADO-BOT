@@ -1,0 +1,192 @@
+const warnings = new Map();
+
+function getWarnings(jid) {
+  if (!warnings.has(jid)) {
+    warnings.set(jid, new Map());
+  }
+
+  return warnings.get(jid);
+}
+
+function getSender(message) {
+  return (
+    message?.key?.participant ||
+    message?.key?.remoteJid ||
+    ""
+  );
+}
+
+function isAdmin(participants, jid) {
+  const member = participants.find(
+    p => p.id === jid
+  );
+
+  return !!(
+    member &&
+    (member.admin === "admin" ||
+      member.admin === "superadmin")
+  );
+}
+
+async function handleModeration(
+  command,
+  args,
+  sock,
+  jid,
+  message
+) {
+  const commands = [
+    "warn",
+    "warnings",
+    "clearwarn",
+    "groupadmins",
+    "membercount"
+  ];
+
+  if (!commands.includes(command)) {
+    return false;
+  }
+
+  if (!jid.endsWith("@g.us")) {
+    await sock.sendMessage(jid, {
+      text: "❌ Cette commande fonctionne uniquement dans un groupe."
+    });
+    return true;
+  }
+
+  try {
+    const metadata =
+      await sock.groupMetadata(jid);
+
+    const participants =
+      metadata.participants || [];
+
+    const sender = getSender(message);
+
+    if (!isAdmin(participants, sender)) {
+      await sock.sendMessage(jid, {
+        text:
+          "⛔ Cette commande est réservée aux administrateurs."
+      });
+      return true;
+    }
+
+    if (command === "membercount") {
+      await sock.sendMessage(jid, {
+        text:
+          `👥 Membres du groupe : *${participants.length}*`
+      });
+
+      return true;
+    }
+
+    if (command === "groupadmins") {
+      const admins = participants.filter(
+        p =>
+          p.admin === "admin" ||
+          p.admin === "superadmin"
+      );
+
+      const list = admins
+        .map(
+          (p, i) =>
+            `${i + 1}. @${p.id.split("@")[0]}`
+        )
+        .join("\n");
+
+      await sock.sendMessage(jid, {
+        text:
+          `👑 *ADMINISTRATEURS*\n\n` +
+          (list || "Aucun administrateur."),
+        mentions: admins.map(p => p.id)
+      });
+
+      return true;
+    }
+
+    const mentioned =
+      message?.message
+        ?.extendedTextMessage
+        ?.contextInfo
+        ?.mentionedJid || [];
+
+    if (!mentioned.length) {
+      await sock.sendMessage(jid, {
+        text:
+          `❌ Mentionne un membre.\n` +
+          `Exemple : .${command} @membre`
+      });
+      return true;
+    }
+
+    const target = mentioned[0];
+
+    if (command === "warn") {
+      const groupWarnings =
+        getWarnings(jid);
+
+      const count =
+        (groupWarnings.get(target) || 0) + 1;
+
+      groupWarnings.set(target, count);
+
+      await sock.sendMessage(jid, {
+        text:
+          `⚠️ @${target.split("@")[0]} a reçu un avertissement.\n\n` +
+          `📊 Total : *${count}* avertissement(s).`,
+        mentions: [target]
+      });
+
+      return true;
+    }
+
+    if (command === "warnings") {
+      const groupWarnings =
+        getWarnings(jid);
+
+      const count =
+        groupWarnings.get(target) || 0;
+
+      await sock.sendMessage(jid, {
+        text:
+          `⚠️ *AVERTISSEMENTS*\n\n` +
+          `👤 @${target.split("@")[0]}\n` +
+          `📊 Total : *${count}* avertissement(s).`,
+        mentions: [target]
+      });
+
+      return true;
+    }
+
+    if (command === "clearwarn") {
+      const groupWarnings =
+        getWarnings(jid);
+
+      groupWarnings.delete(target);
+
+      await sock.sendMessage(jid, {
+        text:
+          `✅ Les avertissements de @${target.split("@")[0]} ont été réinitialisés.`,
+        mentions: [target]
+      });
+
+      return true;
+    }
+
+  } catch (error) {
+    console.error("Moderation:", error);
+
+    await sock.sendMessage(jid, {
+      text:
+        "❌ Impossible d'effectuer cette commande."
+    });
+
+    return true;
+  }
+
+  return false;
+}
+
+module.exports = {
+  handleModeration
+};
