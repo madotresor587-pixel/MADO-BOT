@@ -1,0 +1,73 @@
+async function handleFun(command, args, sock, jid) {
+  switch (command) {
+    case "dice":
+    case "randomnumber": {
+      const max = Number(args[0]) || 6;
+      const value = Math.floor(Math.random() * max) + 1;
+
+      await sock.sendMessage(jid, {
+        text: `🎲 Résultat : *${value}*`
+      });
+      return true;
+    }
+
+    case "coin":
+      await sock.sendMessage(jid, {
+        text: `🪙 ${Math.random() < 0.5 ? "Pile" : "Face"}`
+      });
+      return true;
+
+    case "8ball": {
+      const answers = [
+        "Oui.",
+        "Non.",
+        "Peut-être.",
+        "Certainement.",
+        "Impossible à savoir."
+      ];
+
+      await sock.sendMessage(jid, {
+        text: `🎱 ${answers[Math.floor(Math.random() * answers.length)]}`
+      });
+      return true;
+    }
+
+    case "choose": {
+      const choices = args.join(" ")
+        .split("|")
+        .map(x => x.trim())
+        .filter(Boolean);
+
+      if (choices.length < 2) {
+        await sock.sendMessage(jid, {
+          text: "❌ Exemple : .choose rouge | bleu"
+        });
+        return true;
+      }
+
+      const choice =
+        choices[Math.floor(Math.random() * choices.length)];
+
+      await sock.sendMessage(jid, {
+        text: `🎯 Je choisis : *${choice}*`
+      });
+      return true;
+    }
+
+    case "rps": {
+      const options = ["pierre", "papier", "ciseaux"];
+      const bot =
+        options[Math.floor(Math.random() * options.length)];
+
+      await sock.sendMessage(jid, {
+        text: `✊🤚✌️ Mado choisit : *${bot}*`
+      });
+      return true;
+    }
+
+    default:
+      return false;
+  }
+}
+
+module.exports = { handleFun };
