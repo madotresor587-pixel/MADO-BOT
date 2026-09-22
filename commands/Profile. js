@@ -1,0 +1,62 @@
+function getSender(message) {
+  return (
+    message?.key?.participant ||
+    message?.key?.remoteJid ||
+    ""
+  );
+}
+
+function getNumber(jid) {
+  return String(jid || "")
+    .split("@")[0]
+    .split(":")[0];
+}
+
+async function handleProfile(command, args, sock, jid, message) {
+  const sender = getSender(message);
+
+  switch (command) {
+
+    case "profile":
+    case "profil":
+      await sock.sendMessage(jid, {
+        text:
+          `👤 *TON PROFIL*\n\n` +
+          `📱 Numéro : +${getNumber(sender)}\n` +
+          `🆔 JID : ${sender}`
+      });
+      return true;
+
+    case "jid":
+    case "myid":
+      await sock.sendMessage(jid, {
+        text: `🆔 Ton identifiant :\n\n${sender}`
+      });
+      return true;
+
+    case "whois": {
+      const target =
+        message?.message?.extendedTextMessage
+          ?.contextInfo?.mentionedJid?.[0];
+
+      const user = target || sender;
+
+      await sock.sendMessage(jid, {
+        text:
+          `👤 *INFORMATIONS*\n\n` +
+          `📱 Numéro : +${getNumber(user)}\n` +
+          `🆔 JID : ${user}`,
+        mentions: target ? [target] : []
+      });
+
+      return true;
+    }
+
+    default:
+      return false;
+  }
+}
+
+module.exports = {
+  handleProfile
+};
