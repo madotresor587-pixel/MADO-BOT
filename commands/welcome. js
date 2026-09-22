@@ -1,0 +1,106 @@
+const { loadDatabase, saveDatabase } = require("../lib/database");
+
+function getNumber(jid) {
+  return String(jid || "").split("@")[0].split(":")[0];
+}
+
+async function handleWelcome(command, args, sock, jid) {
+  if (!jid.endsWith("@g.us")) {
+    await sock.sendMessage(jid, {
+      text: "❌ Cette commande fonctionne uniquement dans un groupe."
+    });
+    return true;
+  }
+
+  const db = loadDatabase();
+
+  if (!db.groups[jid]) {
+    db.groups[jid] = {};
+  }
+
+  switch (command) {
+
+    case "welcome": {
+      const option = String(args[0] || "").toLowerCase();
+
+      if (option === "on") {
+        db.groups[jid].welcome = true;
+        saveDatabase(db);
+
+        await sock.sendMessage(jid, {
+          text: "✅ Message de bienvenue activé."
+        });
+
+        return true;
+      }
+
+      if (option === "off") {
+        db.groups[jid].welcome = false;
+        saveDatabase(db);
+
+        await sock.sendMessage(jid, {
+          text: "❌ Message de bienvenue désactivé."
+        });
+
+        return true;
+      }
+
+      const status = db.groups[jid].welcome
+        ? "🟢 Activé"
+        : "🔴 Désactivé";
+
+      await sock.sendMessage(jid, {
+        text:
+          `👋 *Bienvenue — Mado*\n\n` +
+          `État : ${status}\n\n` +
+          `• .welcome on\n` +
+          `• .welcome off`
+      });
+
+      return true;
+    }
+
+    default:
+      return false;
+  }
+}
+
+async function welcomeHandler(update, sock) {
+  try {
+    const { id, participants, action } = update;
+
+    if (!id || !participants?.length) return;
+
+    const db = loadDatabase();
+
+    if (!db.groups[id]?.welcome) return;
+
+    for (const participant of participants) {
+
+      if (action === "add") {
+        await sock.sendMessage(id, {
+          text:
+            `👋 Bienvenue @${getNumber(participant)} !\n\n` +
+            `🤖 Je suis *Mado*.\n` +
+            `📌 Utilise *.menu* pour voir mes commandes.`,
+          mentions: [participant]
+        });
+      }
+
+      if (action === "remove") {
+        await sock.sendMessage(id, {
+          text:
+            `👋 @${getNumber(participant)} a quitté le groupe.`,
+          mentions: [participant]
+        });
+      }
+    }
+  } catch (error) {
+    console.log("⚠️ Erreur welcome :", error.message);
+  }
+}
+
+module.exports = {
+  handleWelcome,
+  welcomeHandler
+};
