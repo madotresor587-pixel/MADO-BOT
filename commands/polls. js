@@ -1,0 +1,183 @@
+const polls = new Map();
+
+async function handlePolls(
+  command,
+  args,
+  sock,
+  jid,
+  message
+) {
+  switch (command) {
+
+    case "poll": {
+      const parts = args
+        .join(" ")
+        .split("|")
+        .map(x => x.trim())
+        .filter(Boolean);
+
+      if (parts.length < 3) {
+        await sock.sendMessage(jid, {
+          text:
+            "❌ Utilisation :\n" +
+            ".poll Question | Option 1 | Option 2"
+        });
+        return true;
+      }
+
+      const question = parts[0];
+      const options = parts.slice(1);
+
+      if (options.length > 10) {
+        await sock.sendMessage(jid, {
+          text: "❌ Maximum : 10 options."
+        });
+        return true;
+      }
+
+      polls.set(jid, {
+        question,
+        options,
+        votes: new Map()
+      });
+
+      await sock.sendMessage(jid, {
+        text:
+          `📊 *SONDAGE MADO*\n\n` +
+          `❓ ${question}\n\n` +
+          options
+            .map((option, i) => `${i + 1}. ${option}`)
+            .join("\n") +
+          `\n\n💬 Vote avec : .vote numéro`
+      });
+
+      return true;
+    }
+
+    case "vote": {
+      const poll = polls.get(jid);
+
+      if (!poll) {
+        await sock.sendMessage(jid, {
+          text: "❌ Aucun sondage actif."
+        });
+        return true;
+      }
+
+      const choice = Number(args[0]);
+
+      if (
+        !Number.isInteger(choice) ||
+        choice < 1 ||
+        choice > poll.options.length
+      ) {
+        await sock.sendMessage(jid, {
+          text:
+            `❌ Choisis un numéro entre 1 et ${poll.options.length}.`
+        });
+        return true;
+      }
+
+      const sender =
+        message?.key?.participant ||
+        message?.key?.remoteJid;
+
+      if (!sender) {
+        await sock.sendMessage(jid, {
+          text: "❌ Utilisateur impossible à identifier."
+        });
+        return true;
+      }
+
+      if (poll.votes.has(sender)) {
+        await sock.sendMessage(jid, {
+          text:
+            "⚠️ Tu as déjà voté dans ce sondage."
+        });
+        return true;
+      }
+
+      poll.votes.set(sender, choice);
+
+      await sock.sendMessage(jid, {
+        text:
+          `✅ Vote enregistré pour :\n` +
+          `*${poll.options[choice - 1]}*`
+      });
+
+      return true;
+    }
+
+    case "pollresult": {
+      const poll = polls.get(jid);
+
+      if (!poll) {
+        await sock.sendMessage(jid, {
+          text: "❌ Aucun sondage actif."
+        });
+        return true;
+      }
+
+      const counts = poll.options.map(
+        (_, index) =>
+          [...poll.votes.values()]
+            .filter(vote => vote === index + 1)
+            .length
+      );
+
+      const totalVotes =
+        [...poll.votes.values()].length;
+
+      const result = poll.options
+        .map(
+          (option, index) =>
+            `${index + 1}. ${option} — ${counts[index]} vote(s)`
+        )
+        .join("\n");
+
+      await sock.sendMessage(jid, {
+        text:
+          `📊 *RÉSULTATS*\n\n` +
+          `❓ ${poll.question}\n\n` +
+          `${result}\n\n` +
+          `👥 Total : ${totalVotes} vote(s)`
+      });
+
+      return true;
+    }
+
+    case "pollclose": {
+      if (!polls.has(jid)) {
+        await sock.sendMessage(jid, {
+          text: "❌ Aucun sondage actif."
+        });
+        return true;
+      }
+
+      polls.delete(jid);
+
+      await sock.sendMessage(jid, {
+        text: "🔒 Sondage fermé."
+      });
+
+      return true;
+    }
+
+    case "pollhelp":
+      await sock.sendMessage(jid, {
+        text:
+          "📊 *SONDAGES MADO*\n\n" +
+          "• .poll Question | Option 1 | Option 2\n" +
+          "• .vote 1\n" +
+          "• .pollresult\n" +
+          "• .pollclose\n" +
+          "• .pollhelp"
+      });
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+module.exports = { handlePolls };
