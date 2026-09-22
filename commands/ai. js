@@ -1,0 +1,70 @@
+const axios = require("axios");
+const { AI_API_KEY } = require("../config");
+
+async function askAI(prompt) {
+  if (!AI_API_KEY) {
+    return "⚠️ L'IA n'est pas encore configurée. Ajoute une clé API dans .env.";
+  }
+
+  const response = await axios.post(
+    "https://api.openai.com/v1/chat/completions",
+    {
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Tu es Mado, un assistant IA utile, clair et multilingue."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ]
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${AI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      timeout: 30000
+    }
+  );
+
+  return (
+    response.data?.choices?.[0]?.message?.content ||
+    "❌ L'IA n'a pas retourné de réponse."
+  );
+}
+
+async function handleAI(command, args, sock, jid) {
+  const text = args.join(" ").trim();
+
+  if (!text) {
+    await sock.sendMessage(jid, {
+      text: "🤖 Exemple : .ai explique-moi la photosynthèse"
+    });
+    return true;
+  }
+
+  try {
+    const answer = await askAI(text);
+
+    await sock.sendMessage(jid, {
+      text: `🤖 *Mado AI*\n\n${answer}`
+    });
+  } catch (error) {
+    console.log("Erreur IA :", error.message);
+
+    await sock.sendMessage(jid, {
+      text: "❌ Impossible de contacter le service IA."
+    });
+  }
+
+  return true;
+}
+
+module.exports = {
+  handleAI,
+  askAI
+};
