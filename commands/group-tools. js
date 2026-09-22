@@ -1,0 +1,315 @@
+async function getMetadata(sock, jid) {
+  try {
+    return await sock.groupMetadata(jid);
+  } catch {
+    return null;
+  }
+}
+
+function getSender(message) {
+  return (
+    message?.key?.participant ||
+    message?.key?.remoteJid ||
+    ""
+  );
+}
+
+async function isAdmin(sock, jid, user) {
+  const metadata = await getMetadata(sock, jid);
+
+  if (!metadata) return false;
+
+  const member = metadata.participants.find(
+    p => p.id === user
+  );
+
+  return Boolean(
+    member &&
+    (member.admin === "admin" ||
+      member.admin === "superadmin")
+  );
+}
+
+async function handleGroupTools(command, args, sock, jid, message) {
+  if (!jid.endsWith("@g.us")) {
+    await sock.sendMessage(jid, {
+      text: "❌ Cette commande fonctionne uniquement dans un groupe."
+    });
+    return true;
+  }
+
+  const sender = getSender(message);
+
+  if (!(await isAdmin(sock, jid, sender))) {
+    await sock.sendMessage(jid, {
+      text: "❌ Réservé aux administrateurs."
+    });
+    return true;
+  }
+
+  switch (command) {
+
+    case "groupopen":
+      try {
+        await sock.groupSettingUpdate(jid, "not_announcement");
+
+        await sock.sendMessage(jid, {
+          text: "🔓 Le groupe est maintenant ouvert à tous les membres."
+        });
+      } catch {
+        await sock.sendMessage(jid, {
+          text: "❌ Impossible de modifier les paramètres du groupe."
+        });
+      }
+      return true;
+
+    case "groupclose":
+      try {
+        await sock.groupSettingUpdate(jid, "announcement");
+
+        await sock.sendMessage(jid, {
+          text: "🔒 Le groupe est maintenant réservé aux administrateurs."
+        });
+      } catch {
+        await sock.sendMessage(jid, {
+          text: "❌ Impossible de modifier les paramètres du groupe."
+        });
+      }
+      return true;
+
+    case "setname": {
+      const name = args.join(" ").trim();
+
+      if (!name) {
+        await sock.sendMessage(jid, {
+          text: "❌ Exemple : .setname Nouveau nom"
+        });
+        return true;
+      }
+
+      try {
+        await sock.groupUpdateSubject(jid, name);
+
+        await sock.sendMessage(jid, {
+          text: `✅ Nom du groupe changé en : *${name}*`
+        });
+      } catch {
+        await sock.sendMessage(jid, {
+          text: "❌ Impossible de changer le nom du groupe."
+        });
+      }
+
+      return true;
+    }
+
+    case "setdesc": {
+      const description = args.join(" ").trim();
+
+      if (!description) {
+        await sock.sendMessage(jid, {
+          text: "❌ Exemple : .setdesc Description du groupe"
+        });
+        return true;
+      }
+
+      try {
+        await sock.groupUpdateDescription(
+          jid,
+          description
+        );
+
+        await sock.sendMessage(jid, {
+          text: "✅ Description du groupe mise à jour."
+        });
+      } catch {
+        await sock.sendMessage(jid, {
+          text: "❌ Impossible de modifier la description."
+        });
+      }
+
+      return true;
+    }
+
+    case "grouplink": {
+      try {
+        const code = await sock.groupInviteCode(jid);
+
+        await sock.sendMessage(jid, {
+          text:
+            `🔗 *Lien du groupe*\n\n` +
+            `https://chat.whatsapp.com/${code}`
+        });
+      } catch {
+        await sock.sendMessage(jid, {
+          text: "❌ Impossible de récupérer le lien du groupe."
+        });
+      }
+
+      return true;
+    }
+
+    default:
+      return false;
+  }
+}
+
+module.exports = {
+  handleGroupTools
+};async function getMetadata(sock, jid) {
+  try {
+    return await sock.groupMetadata(jid);
+  } catch {
+    return null;
+  }
+}
+
+function getSender(message) {
+  return (
+    message?.key?.participant ||
+    message?.key?.remoteJid ||
+    ""
+  );
+}
+
+async function isAdmin(sock, jid, user) {
+  const metadata = await getMetadata(sock, jid);
+
+  if (!metadata) return false;
+
+  const member = metadata.participants.find(
+    p => p.id === user
+  );
+
+  return Boolean(
+    member &&
+    (member.admin === "admin" ||
+      member.admin === "superadmin")
+  );
+}
+
+async function handleGroupTools(command, args, sock, jid, message) {
+  if (!jid.endsWith("@g.us")) {
+    await sock.sendMessage(jid, {
+      text: "❌ Cette commande fonctionne uniquement dans un groupe."
+    });
+    return true;
+  }
+
+  const sender = getSender(message);
+
+  if (!(await isAdmin(sock, jid, sender))) {
+    await sock.sendMessage(jid, {
+      text: "❌ Réservé aux administrateurs."
+    });
+    return true;
+  }
+
+  switch (command) {
+
+    case "groupopen":
+      try {
+        await sock.groupSettingUpdate(jid, "not_announcement");
+
+        await sock.sendMessage(jid, {
+          text: "🔓 Le groupe est maintenant ouvert à tous les membres."
+        });
+      } catch {
+        await sock.sendMessage(jid, {
+          text: "❌ Impossible de modifier les paramètres du groupe."
+        });
+      }
+      return true;
+
+    case "groupclose":
+      try {
+        await sock.groupSettingUpdate(jid, "announcement");
+
+        await sock.sendMessage(jid, {
+          text: "🔒 Le groupe est maintenant réservé aux administrateurs."
+        });
+      } catch {
+        await sock.sendMessage(jid, {
+          text: "❌ Impossible de modifier les paramètres du groupe."
+        });
+      }
+      return true;
+
+    case "setname": {
+      const name = args.join(" ").trim();
+
+      if (!name) {
+        await sock.sendMessage(jid, {
+          text: "❌ Exemple : .setname Nouveau nom"
+        });
+        return true;
+      }
+
+      try {
+        await sock.groupUpdateSubject(jid, name);
+
+        await sock.sendMessage(jid, {
+          text: `✅ Nom du groupe changé en : *${name}*`
+        });
+      } catch {
+        await sock.sendMessage(jid, {
+          text: "❌ Impossible de changer le nom du groupe."
+        });
+      }
+
+      return true;
+    }
+
+    case "setdesc": {
+      const description = args.join(" ").trim();
+
+      if (!description) {
+        await sock.sendMessage(jid, {
+          text: "❌ Exemple : .setdesc Description du groupe"
+        });
+        return true;
+      }
+
+      try {
+        await sock.groupUpdateDescription(
+          jid,
+          description
+        );
+
+        await sock.sendMessage(jid, {
+          text: "✅ Description du groupe mise à jour."
+        });
+      } catch {
+        await sock.sendMessage(jid, {
+          text: "❌ Impossible de modifier la description."
+        });
+      }
+
+      return true;
+    }
+
+    case "grouplink": {
+      try {
+        const code = await sock.groupInviteCode(jid);
+
+        await sock.sendMessage(jid, {
+          text:
+            `🔗 *Lien du groupe*\n\n` +
+            `https://chat.whatsapp.com/${code}`
+        });
+      } catch {
+        await sock.sendMessage(jid, {
+          text: "❌ Impossible de récupérer le lien du groupe."
+        });
+      }
+
+      return true;
+    }
+
+    default:
+      return false;
+  }
+}
+
+module.exports = {
+  handleGroupTools
+};
