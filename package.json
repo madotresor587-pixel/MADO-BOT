@@ -1,7 +1,6 @@
 {
-  "name": "mado-bot",
-  "version": "5.0",
-  "main": "telegram.js",
-  "scripts": { "start": "node telegram.js" },
-  "dependencies": { "telegraf": "^4.15.0", "axios": "^1.6.0", "@whiskeysockets/baileys": "^6.7.0", "pino": "^9.0.0" }
+  "name":"mado-bot-vercel",
+  "version":"5.0",
+  "main":"api.js",
+  "dependencies":{ "telegraf":"^4.15.0" }
 }
