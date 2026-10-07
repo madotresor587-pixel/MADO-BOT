@@ -1,6 +1,5 @@
-node_modules/
-session/
-.env
-database/data.json
-database/*.tmpjadibot/
-.vercel
+session*
+creds.json
+*.backup
+*.back
+node_modules
