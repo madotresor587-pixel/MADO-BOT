@@ -2,4 +2,5 @@ node_modules/
 session/
 .env
 database/data.json
-database/*.tmp
+database/*.tmpjadibot/
+.vercel

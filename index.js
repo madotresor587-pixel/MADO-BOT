@@ -1,62 +1,45 @@
-require("dotenv").config();
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require("@whiskeysockets/baileys");
-const pino = require("pino");
-const config = require("./config");
-const fs = require("fs");
+const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys')
+const P = require('pino')
 
-async function startBot() {
-  const { state, saveCreds } = await useMultiFileAuthState(config.SESSION_DIR);
-  
+async function startBot(){
+  const { version } = await fetchLatestBaileysVersion()
+  const { state, saveCreds } = await useMultiFileAuthState('./session')
   const sock = makeWASocket({
+    version,
+    logger: P({level:'silent'}),
     auth: state,
-    logger: pino({ level: "silent" }),
     printQRInTerminal: false,
-    browser: [config.BOT_NAME, "Chrome", "1.0.0"]
-  });
+    browser: ["Windows","Chrome","Chrome 114.0.5735.198"],
+  })
+  sock.ev.on("creds.update", saveCreds)
 
-  sock.ev.on("creds.update", saveCreds);
-
-  sock.ev.on("connection.update", async (update) => {
-    const { connection, lastDisconnect } = update;
+  if(!state.creds.registered){
+    console.log("Connexion à WhatsApp en cours... patiente 8 secondes")
+    // ATTEND QUE LE SOCKET SOIT VRAIMENT OUVERT
+    await new Promise(r=>setTimeout(r,8000))
     
-    if (connection === "close") {
-      const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-      if (shouldReconnect) {
-        console.log("Reconnexion...");
-        startBot();
+    let retries = 3
+    while(retries > 0){
+      try{
+        let code = await sock.requestPairingCode("2250153448840")
+        console.log("\n================ MADO CODE ================")
+        console.log(" NUMERO: 2250153448840")
+        console.log(" CODE  : " + code.slice(0,4)+"-"+code.slice(4))
+        console.log("===========================================")
+        console.log(" Va vite sur WhatsApp > Appareils liés > Lier avec numéro\n")
+        break
+      }catch(e){
+        console.log("WhatsApp pas prêt, je réessaye... ("+e.message+")")
+        retries--
+        await new Promise(r=>setTimeout(r,5000))
       }
-    } else if (connection === "open") {
-      console.log("✅ MADO-BOT connecté !");
-    }
-  });
-
-  // Demande code pair après 3 secondes
-  if (!sock.authState.creds.registered) {
-    await new Promise(r => setTimeout(r, 3000));
-    const num = process.env.OWNER_NUMBER || config.OWNER_NUMBER;
-    const phoneNumber = (num || "").replace(/[^0-9]/g, "");
-    if (!phoneNumber) {
-      console.log("❌ Mets OWNER_NUMBER dans .env");
-      return;
-    }
-    console.log(`\n📱 Demande du code pair pour: ${phoneNumber}...`);
-    try {
-      const code = await sock.requestPairingCode(phoneNumber);
-      console.log(`\n\n========================`);
-      console.log(`✅ CODE: ${code}`);
-      console.log(`========================\n`);
-      console.log(`WhatsApp > Appareils liés > Lier avec numéro\n`);
-    } catch (e) {
-      console.log("Erreur:", e.message);
-      console.log("Relance: node index.js");
     }
   }
 
-  // Essaie de charger les commandes si elles existent
-  try {
-    const files = fs.readdirSync("./lib");
-    console.log("Fichiers lib trouvés:", files);
-  } catch {}
+  sock.ev.on("connection.update", ({connection})=>{
+    if(connection==="open"){
+      console.log("\n✅✅✅ MADO CONNECTÉ 2250153448840 ! ✅✅✅\n")
+    }
+  })
 }
-
-startBot();
+startBot()
